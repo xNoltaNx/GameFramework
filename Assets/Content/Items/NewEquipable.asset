@@ -1,0 +1,32 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 896907493b5923548b44880c4f1b4a8b, type: 3}
+  m_Name: NewEquipable
+  m_EditorClassIdentifier: 
+  itemName: New Item
+  description: 
+  icon: {fileID: 0}
+  isStackable: 1
+  maxStackSize: 99
+  weight: 1
+  value: 0
+  worldPrefab: {fileID: 1597018211303228554, guid: 71d46b32e0b0ad144990872e61b2bc9f, type: 3}
+  pickupSound: {fileID: 0}
+  dropSound: {fileID: 0}
+  equipmentSlot: 0
+  equipmentPrefab: {fileID: 1597018211303228554, guid: 71d46b32e0b0ad144990872e61b2bc9f, type: 3}
+  attachmentOffset: {x: 0, y: 0, z: 0}
+  attachmentRotation: {x: 0, y: 0, z: 0}
+  attachmentScale: {x: 1, y: 1, z: 1}
+  alternativeSlots: 
+  equipSound: {fileID: 0}
+  unequipSound: {fileID: 0}

@@ -1,0 +1,24 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 56a9b928713825540ad768dfcbf3daf5, type: 3}
+  m_Name: NewItem
+  m_EditorClassIdentifier: 
+  itemName: New Item
+  description: This is a new item.
+  icon: {fileID: 0}
+  isStackable: 1
+  maxStackSize: 99
+  weight: 1
+  value: 0
+  worldPrefab: {fileID: 4091562792922142215, guid: 70fddfc862ca59143a0810f9ad26e769, type: 3}
+  pickupSound: {fileID: 0}
+  dropSound: {fileID: 0}
