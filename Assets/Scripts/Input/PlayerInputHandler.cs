@@ -1,6 +1,7 @@
 using UnityEngine;
 using UnityEngine.InputSystem;
 using GameFramework.Core.Interfaces;
+using GameFramework.UI;
 
 namespace GameFramework.Input
 {
@@ -8,6 +9,9 @@ namespace GameFramework.Input
     {
         [Header("Input Settings")]
         [SerializeField] private float mouseSensitivity = 2f;
+        
+        [Header("UI References")]
+        [SerializeField] private InventoryUI inventoryUI;
         
         private InputSystem_Actions inputActions;
         private Vector2 movementInput;
@@ -18,6 +22,8 @@ namespace GameFramework.Input
         private bool crouchHeld;
         private bool attackPressed;
         private bool interactPressed;
+        private bool inventoryTogglePressed;
+        private Vector2 scrollInput;
 
         public Vector2 MovementInput => movementInput;
         public Vector2 LookInput => lookInput;
@@ -27,6 +33,8 @@ namespace GameFramework.Input
         public bool CrouchHeld => crouchHeld;
         public bool AttackPressed => attackPressed;
         public bool InteractPressed => interactPressed;
+        public bool InventoryTogglePressed => inventoryTogglePressed;
+        public Vector2 ScrollInput => scrollInput;
 
         private void Awake()
         {
@@ -54,6 +62,17 @@ namespace GameFramework.Input
             
             inputActions.Player.Attack.performed += OnAttackPerformed;
             inputActions.Player.Interact.performed += OnInteractPerformed;
+            
+            inputActions.Player.ToggleInventory.performed += OnToggleInventoryPerformed;
+            inputActions.Player.Hotbar1.performed += OnHotbar1Performed;
+            inputActions.Player.Hotbar2.performed += OnHotbar2Performed;
+            inputActions.Player.Hotbar3.performed += OnHotbar3Performed;
+            inputActions.Player.Hotbar4.performed += OnHotbar4Performed;
+            inputActions.Player.Hotbar5.performed += OnHotbar5Performed;
+            
+            // Use UI scroll wheel input for equipment cycling
+            inputActions.UI.ScrollWheel.performed += OnScrollWheelPerformed;
+            inputActions.UI.ScrollWheel.canceled += OnScrollWheelCanceled;
         }
 
         private void OnEnable()
@@ -81,16 +100,20 @@ namespace GameFramework.Input
             jumpPressed = false;
             attackPressed = false;
             interactPressed = false;
+            inventoryTogglePressed = false;
+            scrollInput = Vector2.zero;
         }
 
         public void EnableInput()
         {
             inputActions?.Player.Enable();
+            inputActions?.UI.Enable();
         }
 
         public void DisableInput()
         {
             inputActions?.Player.Disable();
+            inputActions?.UI.Disable();
         }
 
         public void SetMouseSensitivity(float sensitivity)
@@ -158,6 +181,71 @@ namespace GameFramework.Input
         {
             Debug.Log("Interact input detected!");
             interactPressed = true;
+        }
+        
+        private void OnToggleInventoryPerformed(InputAction.CallbackContext context)
+        {
+            inventoryTogglePressed = true;
+            if (inventoryUI != null)
+            {
+                inventoryUI.ToggleInventory();
+            }
+        }
+        
+        private void OnHotbar1Performed(InputAction.CallbackContext context)
+        {
+            if (inventoryUI != null)
+            {
+                inventoryUI.SelectHotbarSlot(0);
+            }
+        }
+        
+        private void OnHotbar2Performed(InputAction.CallbackContext context)
+        {
+            if (inventoryUI != null)
+            {
+                inventoryUI.SelectHotbarSlot(1);
+            }
+        }
+        
+        private void OnHotbar3Performed(InputAction.CallbackContext context)
+        {
+            if (inventoryUI != null)
+            {
+                inventoryUI.SelectHotbarSlot(2);
+            }
+        }
+        
+        private void OnHotbar4Performed(InputAction.CallbackContext context)
+        {
+            if (inventoryUI != null)
+            {
+                inventoryUI.SelectHotbarSlot(3);
+            }
+        }
+        
+        private void OnHotbar5Performed(InputAction.CallbackContext context)
+        {
+            if (inventoryUI != null)
+            {
+                inventoryUI.SelectHotbarSlot(4);
+            }
+        }
+        
+        private void OnScrollWheelPerformed(InputAction.CallbackContext context)
+        {
+            scrollInput = context.ReadValue<Vector2>();
+            
+            // Handle equipment cycling when inventory UI is available
+            if (inventoryUI != null && scrollInput.y != 0)
+            {
+                inventoryUI.CycleEquippedItems(scrollInput.y > 0);
+            }
+        }
+        
+        private void OnScrollWheelCanceled(InputAction.CallbackContext context)
+        {
+            scrollInput = Vector2.zero;
         }
     }
 }

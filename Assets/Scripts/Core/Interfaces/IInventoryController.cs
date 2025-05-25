@@ -14,6 +14,7 @@ namespace GameFramework.Core.Interfaces
         bool RemoveItem(GameFramework.Items.ItemDefinition item, int quantity = 1);
         bool HasItem(GameFramework.Items.ItemDefinition item, int quantity = 1);
         int GetItemCount(GameFramework.Items.ItemDefinition item);
+        List<System.Collections.Generic.KeyValuePair<GameFramework.Items.ItemDefinition, int>> GetAllItems();
         
         void Clear();
     }

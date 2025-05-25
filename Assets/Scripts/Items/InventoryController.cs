@@ -182,6 +182,16 @@ namespace GameFramework.Items
             return count;
         }
         
+        public List<System.Collections.Generic.KeyValuePair<ItemDefinition, int>> GetAllItems()
+        {
+            var result = new List<System.Collections.Generic.KeyValuePair<ItemDefinition, int>>();
+            foreach (ItemStack stack in items)
+            {
+                result.Add(new System.Collections.Generic.KeyValuePair<ItemDefinition, int>(stack.item, stack.quantity));
+            }
+            return result;
+        }
+        
         private ItemStack FindItemStack(ItemDefinition item)
         {
             foreach (ItemStack stack in items)
