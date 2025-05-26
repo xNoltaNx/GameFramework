@@ -10,6 +10,7 @@ namespace GameFramework.Locomotion.States
         {
             controller.ApplyGravity();
             
+            // Transition to grounded when touching ground and falling/stationary
             if (controller.IsGrounded && controller.Velocity.y <= 0f)
             {
                 controller.ChangeToGroundedState();

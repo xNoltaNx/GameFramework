@@ -1,6 +1,7 @@
 using UnityEngine;
 using GameFramework.Core.Interfaces;
 using GameFramework.Core.StateMachine;
+using GameFramework.Core;
 using GameFramework.Locomotion.States;
 
 namespace GameFramework.Locomotion
@@ -29,15 +30,12 @@ namespace GameFramework.Locomotion
         [SerializeField] private bool allowAirDirectionChange = true;
         [SerializeField] private float directionChangeThreshold = 0.8f;
         
-        [Header("Ground Check")]
-        [SerializeField] private LayerMask groundMask = 1;
-        [SerializeField] private float groundCheckRadius = 0.28f;
-        [SerializeField] private float groundCheckDistance = 0.1f;
-        [SerializeField] private Transform groundCheck;
+        // Ground check now handled by Unity's CharacterController.isGrounded
         
         [Header("Debug")]
         [SerializeField] private bool debugGravity = false;
         [SerializeField] private bool debugMantle = false;
+        [SerializeField] private bool debugStateTransitions = false;
         
         [Header("Crouch Settings")]
         [SerializeField] private float crouchHeight = 1f;
@@ -52,6 +50,8 @@ namespace GameFramework.Locomotion
         
         [Header("Slide Jump Settings")]
         [SerializeField] private float slideJumpForwardBoost = 8f;
+        [SerializeField] private float slideJumpBoostDuration = 1.0f; // Total boost duration
+        [SerializeField] private float slideJumpBoostFadeTime = 0.5f; // Time to fade from boost to normal
         [SerializeField] private float slideJumpHeightMultiplier = 1.2f;
         [SerializeField] private bool maintainSlideDirection = true;
         
@@ -62,12 +62,12 @@ namespace GameFramework.Locomotion
         [SerializeField] private float mantleDuration = 0.8f;
         [SerializeField] private float minMantleVelocity = 2f;
         [SerializeField] private LayerMask mantleLayers = 1;
+        [SerializeField] private EasingSettings mantleEasing = new EasingSettings(EasingType.EaseOutQuart);
         
         private CharacterController characterController;
         private Transform cameraTransform;
         private Vector3 velocity;
-        private bool isGrounded;
-        private bool wasGrounded;
+        private float slideJumpBoostTime = 0f;
         private float jumpTimeoutDelta;
         private float fallTimeoutDelta;
         private bool isCrouching;
@@ -82,7 +82,7 @@ namespace GameFramework.Locomotion
         private FallingState fallingState;
         private MantleState mantleState;
 
-        public bool IsGrounded => isGrounded;
+        public bool IsGrounded => characterController?.isGrounded ?? false;
         public bool IsMoving => new Vector3(velocity.x, 0f, velocity.z).magnitude > 0.1f;
         public bool IsSprinting { get; set; }
         public bool IsCrouching => isCrouching;
@@ -107,6 +107,7 @@ namespace GameFramework.Locomotion
         public float MantleDuration => mantleDuration;
         public float MinMantleVelocity => minMantleVelocity;
         public LayerMask MantleLayers => mantleLayers;
+        public EasingSettings MantleEasing => mantleEasing;
         public float AirControlStrength => airControlStrength;
         public float AirMaxSpeed => airMaxSpeed;
         public float AirAcceleration => airAcceleration;
@@ -132,25 +133,11 @@ namespace GameFramework.Locomotion
                 }
             }
 
-            if (groundCheck == null)
-            {
-                groundCheck = transform;
-                Debug.LogWarning($"FirstPersonLocomotionController on {gameObject.name}: No groundCheck assigned, using self transform.");
-            }
-            
             // Validate setup on startup
             if (debugGravity && characterController != null)
             {
                 Debug.Log($"Character Controller Setup - Height: {characterController.height}, " +
-                         $"Radius: {characterController.radius}, Center: {characterController.center}, " +
-                         $"Player Layer: {gameObject.layer}, Ground Mask: {groundMask.value}");
-                         
-                // Check if player is on ground layer (common mistake)
-                if (((1 << gameObject.layer) & groundMask) != 0)
-                {
-                    Debug.LogError("SETUP ERROR: Player GameObject is on a layer included in groundMask! " +
-                                  "This will cause constant ground detection. Move player to a different layer.");
-                }
+                         $"Radius: {characterController.radius}, Center: {characterController.center}");
             }
         }
 
@@ -201,68 +188,15 @@ namespace GameFramework.Locomotion
 
         private void Update()
         {
-            // Skip ground check and crouch transitions during mantling to ensure atomic movement
+            // Skip crouch transitions during mantling to ensure atomic movement
             if (!stateMachine.IsInState<MantleState>())
             {
-                GroundCheck();
                 HandleCrouchTransition();
             }
             
             stateMachine?.Update();
         }
 
-        private void GroundCheck()
-        {
-            wasGrounded = isGrounded;
-            
-            Vector3 center = transform.position;
-            float checkDistance = (characterController.height / 2f) + groundCheckDistance;
-            
-            // Primary raycast check straight down with surface normal validation
-            bool raycastGrounded = false;
-            if (Physics.Raycast(center, Vector3.down, out RaycastHit hit, checkDistance, groundMask))
-            {
-                // Only consider it ground if the surface is reasonably flat (not a wall)
-                float surfaceAngle = Vector3.Angle(hit.normal, Vector3.up);
-                raycastGrounded = surfaceAngle <= 45f; // Allow up to 45 degree slopes
-                
-                if (debugGravity && !raycastGrounded)
-                {
-                    Debug.Log($"Surface too steep: {surfaceAngle:F1}° (max 45°)");
-                }
-            }
-            
-            // Secondary sphere check at character bottom for edge cases
-            Vector3 spherePosition = new Vector3(center.x, center.y - (characterController.height / 2f) + groundCheckDistance, center.z);
-            Collider[] hitColliders = Physics.OverlapSphere(spherePosition, groundCheckRadius, groundMask);
-            
-            bool sphereGrounded = false;
-            if (hitColliders.Length > 0)
-            {
-                // Validate each hit with a raycast to check surface normal
-                foreach (var collider in hitColliders)
-                {
-                    Vector3 directionToCollider = (collider.ClosestPoint(spherePosition) - spherePosition).normalized;
-                    if (Physics.Raycast(spherePosition, directionToCollider, out RaycastHit sphereHit, groundCheckRadius + 0.1f, groundMask))
-                    {
-                        float surfaceAngle = Vector3.Angle(sphereHit.normal, Vector3.up);
-                        if (surfaceAngle <= 45f)
-                        {
-                            sphereGrounded = true;
-                            break;
-                        }
-                    }
-                }
-            }
-            
-            isGrounded = raycastGrounded || sphereGrounded;
-            
-            if (debugGravity)
-            {
-                Debug.Log($"Ground Check - Raycast: {raycastGrounded}, Sphere: {sphereGrounded}, " +
-                         $"Final: {isGrounded}, Velocity.y: {velocity.y}");
-            }
-        }
 
 
         public void HandleMovement(Vector2 movementInput, bool sprintHeld, bool crouchHeld)
@@ -315,14 +249,13 @@ namespace GameFramework.Locomotion
         
         public void ChangeToGroundedState()
         {
-            if (isCrouching)
+            // Always go to standing when landing, let the standing state handle crouch input
+            // This prevents issues with crouching while airborne
+            if (debugStateTransitions)
             {
-                stateMachine?.ChangeState<CrouchingState>();
+                Debug.Log($"Transitioning to grounded state. IsGrounded: {IsGrounded}, Velocity.y: {velocity.y}, IsCrouching: {isCrouching}");
             }
-            else
-            {
-                stateMachine?.ChangeState<StandingState>();
-            }
+            stateMachine?.ChangeState<StandingState>();
         }
 
         private void HandleCrouchTransition()
@@ -344,21 +277,28 @@ namespace GameFramework.Locomotion
         public bool CanStandUp()
         {
             Vector3 capsuleTop = transform.position + Vector3.up * standingHeight;
-            return !Physics.CheckSphere(capsuleTop, characterController.radius, groundMask);
+            return !Physics.CheckSphere(capsuleTop, characterController.radius);
         }
 
         public bool CanJump()
         {
-            return jumpTimeoutDelta <= 0.0f && isGrounded;
+            bool canJump = jumpTimeoutDelta <= 0.0f && IsGrounded;
+            if (debugStateTransitions)
+            {
+                Debug.Log($"CanJump - Timeout: {jumpTimeoutDelta:F2}, IsGrounded: {IsGrounded}, Result: {canJump}");
+            }
+            return canJump;
         }
         
         public void ApplyGravity()
         {
-            if (isGrounded && velocity.y < 0.0f)
+            bool grounded = IsGrounded;
+            
+            if (grounded && velocity.y < 0.0f)
             {
                 velocity.y = -2f;
             }
-            else if (!isGrounded)
+            else if (!grounded)
             {
                 velocity.y += gravity * Time.deltaTime;
             }
@@ -374,12 +314,18 @@ namespace GameFramework.Locomotion
 
             if (debugGravity)
             {
-                Debug.Log($"Gravity Applied - IsGrounded: {isGrounded}, Velocity.y: {velocity.y}, Gravity: {gravity}");
+                Debug.Log($"Gravity Applied - IsGrounded: {grounded}, Velocity.y: {velocity.y}, Gravity: {gravity}");
             }
         }
         
         public void HandleAirMovement(Vector2 movementInput)
         {
+            // Update slide jump boost timer
+            if (slideJumpBoostTime > 0f)
+            {
+                slideJumpBoostTime -= Time.deltaTime;
+            }
+            
             Vector3 inputDirection = GetMovementDirection(movementInput);
             Vector3 currentHorizontalVelocity = new Vector3(velocity.x, 0f, velocity.z);
             
@@ -407,9 +353,34 @@ namespace GameFramework.Locomotion
                                                                    airControlStrength * airAcceleration * Time.deltaTime);
                 }
                 
+                // Handle slide jump boost fade transition
                 if (currentHorizontalVelocity.magnitude > airMaxSpeed)
                 {
-                    currentHorizontalVelocity = currentHorizontalVelocity.normalized * airMaxSpeed;
+                    if (slideJumpBoostTime > 0f)
+                    {
+                        // Calculate fade factor - full boost at start, fades to normal over fadeTime
+                        float fadeStartTime = slideJumpBoostFadeTime;
+                        if (slideJumpBoostTime <= fadeStartTime)
+                        {
+                            // In fade period - lerp between current speed and airMaxSpeed
+                            float fadeProgress = (fadeStartTime - slideJumpBoostTime) / fadeStartTime;
+                            float currentSpeed = currentHorizontalVelocity.magnitude;
+                            float targetSpeed = Mathf.Lerp(currentSpeed, airMaxSpeed, fadeProgress);
+                            
+                            if (debugStateTransitions)
+                            {
+                                Debug.Log($"Slide boost fade - Progress: {fadeProgress:F2}, Speed: {currentSpeed:F1} -> {targetSpeed:F1}");
+                            }
+                            
+                            currentHorizontalVelocity = currentHorizontalVelocity.normalized * targetSpeed;
+                        }
+                        // Else: still in full boost period, don't clamp
+                    }
+                    else
+                    {
+                        // No boost active, apply normal air speed limit
+                        currentHorizontalVelocity = currentHorizontalVelocity.normalized * airMaxSpeed;
+                    }
                 }
             }
             else
@@ -476,6 +447,9 @@ namespace GameFramework.Locomotion
             
             velocity.x += forwardBoost.x;
             velocity.z += forwardBoost.z;
+            
+            // Set boost window to preserve slide jump velocity with smooth fade
+            slideJumpBoostTime = slideJumpBoostDuration;
             jumpTimeoutDelta = jumpTimeout;
         }
 
@@ -593,22 +567,8 @@ namespace GameFramework.Locomotion
         {
             if (characterController != null)
             {
-                Vector3 center = transform.position;
-                float checkDistance = (characterController.height / 2f) + groundCheckDistance;
-                
-                // Draw primary raycast check
-                Gizmos.color = isGrounded ? Color.green : Color.red;
-                Vector3 rayEnd = center + Vector3.down * checkDistance;
-                Gizmos.DrawLine(center, rayEnd);
-                Gizmos.DrawWireSphere(rayEnd, 0.1f);
-                
-                // Draw sphere check at character bottom
-                Vector3 spherePosition = new Vector3(center.x, center.y - (characterController.height / 2f) + groundCheckDistance, center.z);
-                Gizmos.color = isGrounded ? Color.green : Color.yellow;
-                Gizmos.DrawWireSphere(spherePosition, groundCheckRadius);
-                
                 // Draw character controller bounds
-                Gizmos.color = Color.blue;
+                Gizmos.color = IsGrounded ? Color.green : Color.red;
                 Gizmos.DrawWireCube(transform.position, new Vector3(characterController.radius * 2, characterController.height, characterController.radius * 2));
                 
                 // Draw mantle debug visualization

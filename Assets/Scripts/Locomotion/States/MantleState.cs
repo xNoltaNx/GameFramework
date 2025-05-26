@@ -1,4 +1,5 @@
 using UnityEngine;
+using GameFramework.Core;
 
 namespace GameFramework.Locomotion.States
 {
@@ -43,7 +44,15 @@ namespace GameFramework.Locomotion.States
         {
             if (mantleComplete)
             {
-                controller.ChangeToStandingState();
+                // Check if we're actually grounded after mantling, otherwise fall
+                if (controller.IsGrounded)
+                {
+                    controller.ChangeToStandingState();
+                }
+                else
+                {
+                    controller.ChangeToFallingState();
+                }
                 return;
             }
 
@@ -61,8 +70,11 @@ namespace GameFramework.Locomotion.States
                 return;
             }
 
-            // Calculate arc position using quadratic bezier curve
-            Vector3 currentPosition = CalculateArcPosition(progress);
+            // Apply easing to the progress
+            float easedProgress = controller.MantleEasing.Evaluate(progress);
+            
+            // Calculate arc position using eased progress
+            Vector3 currentPosition = CalculateArcPosition(easedProgress);
             Vector3 previousPosition = controller.transform.position;
             Vector3 movement = currentPosition - previousPosition;
             
@@ -84,15 +96,6 @@ namespace GameFramework.Locomotion.States
             // Ignore jump input during mantling - mantle must complete atomically
         }
 
-        private float EaseOutQuart(float t)
-        {
-            return 1f - Mathf.Pow(1f - t, 4f);
-        }
-        
-        private float EaseOutCubic(float t)
-        {
-            return 1f - Mathf.Pow(1f - t, 3f);
-        }
         
         private Vector3 CalculateArcPosition(float t)
         {
