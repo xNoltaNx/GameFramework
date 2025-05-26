@@ -15,7 +15,7 @@ MonoBehaviour:
   itemName: New Item
   description: 
   icon: {fileID: 0}
-  isStackable: 1
+  isStackable: 0
   maxStackSize: 99
   weight: 1
   value: 0
@@ -23,7 +23,7 @@ MonoBehaviour:
   pickupSound: {fileID: 0}
   dropSound: {fileID: 0}
   equipmentSlot: 0
-  equipmentPrefab: {fileID: 1597018211303228554, guid: 71d46b32e0b0ad144990872e61b2bc9f, type: 3}
+  equipmentPrefab: {fileID: 5856028302150361547, guid: e67e7382bc2ef094fab78753e35f2bcf, type: 3}
   attachmentOffset: {x: 0, y: 0, z: 0}
   attachmentRotation: {x: 0, y: 0, z: 0}
   attachmentScale: {x: 1, y: 1, z: 1}

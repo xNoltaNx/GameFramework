@@ -23,10 +23,14 @@ namespace GameFramework.Items
         [SerializeField] private int capacity = 20;
         [SerializeField] private bool unlimitedCapacity = false;
         
+        [Header("Auto-Equip Settings")]
+        [SerializeField] private bool autoEquipOnPickup = true;
+        
         [Header("Debug")]
         [SerializeField] private bool debugMode = false;
         
         private List<ItemStack> items = new List<ItemStack>();
+        private IEquipmentController equipmentController;
         
         public IReadOnlyList<ItemStack> Items => items;
         public int Capacity => unlimitedCapacity ? int.MaxValue : capacity;
@@ -36,6 +40,13 @@ namespace GameFramework.Items
             if (items == null)
             {
                 items = new List<ItemStack>();
+            }
+            
+            // Find equipment controller on the same GameObject or parent
+            equipmentController = GetComponent<IEquipmentController>();
+            if (equipmentController == null)
+            {
+                equipmentController = GetComponentInParent<IEquipmentController>();
             }
         }
         
@@ -89,13 +100,28 @@ namespace GameFramework.Items
                 Debug.Log($"Adding {quantity}x {item.GetDisplayName()} to inventory");
             }
             
-            if (item.CanStack())
+            // Check for auto-equip before adding to inventory
+            bool itemWasAutoEquipped = TryAutoEquipItem(item);
+            
+            // If item was auto-equipped and it's not stackable, don't add to inventory
+            if (itemWasAutoEquipped && !item.CanStack())
             {
-                AddStackableItem(item, quantity);
+                quantity--; // Reduce quantity by 1 for the equipped item
+                if (quantity <= 0)
+                    return true; // All items were equipped, nothing to add to inventory
             }
-            else
+            
+            // Add remaining items to inventory
+            if (quantity > 0)
             {
-                AddNonStackableItem(item, quantity);
+                if (item.CanStack())
+                {
+                    AddStackableItem(item, quantity);
+                }
+                else
+                {
+                    AddNonStackableItem(item, quantity);
+                }
             }
             
             return true;
@@ -223,6 +249,11 @@ namespace GameFramework.Items
             unlimitedCapacity = unlimited;
         }
         
+        public void SetAutoEquipOnPickup(bool autoEquip)
+        {
+            autoEquipOnPickup = autoEquip;
+        }
+        
         // Debug method to display inventory contents
         [ContextMenu("Debug Inventory Contents")]
         public void DebugInventoryContents()
@@ -232,6 +263,40 @@ namespace GameFramework.Items
             {
                 Debug.Log($"- {stack.item.GetDisplayName()}: {stack.quantity}");
             }
+        }
+        
+        /// <summary>
+        /// Attempts to auto-equip an item if auto-equip is enabled and the slot is empty
+        /// </summary>
+        /// <param name="item">The item to potentially auto-equip</param>
+        /// <returns>True if the item was auto-equipped, false otherwise</returns>
+        private bool TryAutoEquipItem(ItemDefinition item)
+        {
+            // Check if auto-equip is enabled
+            if (!autoEquipOnPickup || equipmentController == null)
+                return false;
+            
+            // Check if item is equippable
+            if (!(item is EquippableItemDefinition equippableItem))
+                return false;
+            
+            // Get the slot name for this equipment type
+            string slotName = equippableItem.equipmentSlot.ToString();
+            
+            // Check if the slot is currently empty
+            var currentlyEquippedItem = equipmentController.GetEquippedItem(slotName);
+            if (currentlyEquippedItem != null)
+                return false; // Slot is occupied, don't auto-equip
+            
+            // Try to equip the item
+            bool equipped = equipmentController.EquipItem(equippableItem, slotName);
+            
+            if (equipped && debugMode)
+            {
+                Debug.Log($"Auto-equipped {item.GetDisplayName()} to {slotName} slot");
+            }
+            
+            return equipped;
         }
     }
 }

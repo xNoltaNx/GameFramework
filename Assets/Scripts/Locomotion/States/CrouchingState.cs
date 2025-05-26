@@ -1,0 +1,69 @@
+using UnityEngine;
+
+namespace GameFramework.Locomotion.States
+{
+    public class CrouchingState : GroundedState
+    {
+        private bool justEntered = false;
+        
+        public CrouchingState(FirstPersonLocomotionController controller) : base(controller) { }
+
+        public override void Enter()
+        {
+            controller.SetCrouching(true);
+            justEntered = true;
+        }
+        
+        public override void Exit()
+        {
+            controller.SetCrouching(false);
+            justEntered = false;
+        }
+
+        public override void HandleMovement(Vector2 movementInput, bool sprintHeld, bool crouchHeld)
+        {
+            if (!crouchHeld && controller.CanStandUp())
+            {
+                controller.ChangeToStandingState();
+                return;
+            }
+
+            if (crouchHeld && sprintHeld && movementInput.magnitude > 0.1f && controller.CanSlide)
+            {
+                controller.ChangeToSlidingState(movementInput);
+                return;
+            }
+
+            Vector3 inputDirection = controller.GetMovementDirection(movementInput);
+            Vector3 targetVelocity = inputDirection * controller.CrouchSpeed;
+            
+            if (justEntered)
+            {
+                Vector3 currentHorizontalVelocity = new Vector3(controller.Velocity.x, 0f, controller.Velocity.z);
+                float currentSpeed = currentHorizontalVelocity.magnitude;
+                
+                if (currentSpeed > controller.CrouchSpeed)
+                {
+                    if (movementInput.magnitude < 0.1f)
+                    {
+                        // No input - preserve momentum direction
+                        targetVelocity = currentHorizontalVelocity.normalized * Mathf.Max(controller.CrouchSpeed, currentSpeed * 0.8f);
+                    }
+                    else
+                    {
+                        // Has input - gradually transition to crouch speed
+                        float transitionSpeed = Mathf.Lerp(currentSpeed, controller.CrouchSpeed, 0.3f);
+                        targetVelocity = inputDirection * transitionSpeed;
+                    }
+                }
+                justEntered = false;
+            }
+            
+            controller.ApplyMovement(targetVelocity);
+        }
+
+        public override void HandleJump(bool jumpPressed, bool jumpHeld)
+        {
+        }
+    }
+}

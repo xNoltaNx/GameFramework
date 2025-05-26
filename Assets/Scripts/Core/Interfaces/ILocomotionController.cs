@@ -8,6 +8,7 @@ namespace GameFramework.Core.Interfaces
         bool IsMoving { get; }
         bool IsSprinting { get; }
         bool IsCrouching { get; }
+        bool IsSliding { get; }
         Vector3 Velocity { get; }
         
         void Initialize(CharacterController characterController, Transform cameraTransform);
