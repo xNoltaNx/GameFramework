@@ -1,5 +1,7 @@
 using UnityEngine;
 using UnityEngine.UI;
+using UnityEngine.InputSystem;
+using System.Collections;
 using System.Collections.Generic;
 using TMPro;
 using GameFramework.Items;
@@ -17,7 +19,6 @@ namespace GameFramework.UI
         [SerializeField] private GameObject tooltipPanel;
         
         [Header("Grid Containers")]
-        [SerializeField] private Transform equipmentGridContainer;
         [SerializeField] private Transform inventoryGridContainer;
         [SerializeField] private Transform hotbarContainer;
         [SerializeField] private Transform equipmentSlotsContainer;
@@ -31,15 +32,24 @@ namespace GameFramework.UI
         [SerializeField] private TextMeshProUGUI tooltipTitle;
         [SerializeField] private TextMeshProUGUI tooltipDescription;
         
+        [Header("Animation Settings")]
+        [SerializeField] private float animationDuration = 0.3f;
+        [SerializeField] private AnimationCurve scaleCurve = AnimationCurve.EaseInOut(0f, 0f, 1f, 1f);
+        [SerializeField] private float startScale = 0.8f;
+        
         private IInventoryController inventoryController;
         private IEquipmentController equipmentController;
-        private List<InventorySlot> equipmentSlots = new List<InventorySlot>();
+        private HotbarController hotbarController;
         private List<InventorySlot> inventorySlots = new List<InventorySlot>();
         private List<HotbarSlot> hotbarSlots = new List<HotbarSlot>();
         private List<EquipmentSlotUI> characterEquipmentSlots = new List<EquipmentSlotUI>();
         
         private bool isInventoryOpen = false;
-        private int currentHotbarIndex = 0;
+        private bool isTooltipVisible = false;
+        private bool isAnimating = false;
+        private Coroutine currentAnimation;
+        
+        public bool IsInventoryOpen => isInventoryOpen;
         
         private void Start()
         {
@@ -51,53 +61,54 @@ namespace GameFramework.UI
             equipmentController = GetComponentInParent<IEquipmentController>();
             if (equipmentController == null)
                 equipmentController = FindObjectOfType<EquipmentController>();
+                
+            hotbarController = GetComponent<HotbarController>();
+            if (hotbarController == null)
+                hotbarController = FindObjectOfType<HotbarController>();
             
             InitializeUI();
             
             // Only update UI if controllers are found
-            if (inventoryController != null && equipmentController != null)
+            if (inventoryController != null && equipmentController != null && hotbarController != null)
             {
+                // Subscribe to hotbar events
+                hotbarController.OnHotbarChanged += OnHotbarItemChanged;
+                hotbarController.OnSelectionChanged += OnHotbarSelectionChanged;
+                
                 UpdateUI();
             }
             else
             {
-                Debug.LogWarning("InventoryUI: Could not find InventoryController or EquipmentController!");
+                Debug.LogWarning($"InventoryUI: Missing controllers! Inventory: {inventoryController != null}, Equipment: {equipmentController != null}, Hotbar: {hotbarController != null}");
+            }
+        }
+        
+        private void Update()
+        {
+            // Update tooltip position to follow mouse if tooltip is visible
+            if (isTooltipVisible && tooltipPanel != null && tooltipPanel.activeInHierarchy)
+            {
+                tooltipPanel.transform.position = Mouse.current.position.ReadValue();
             }
         }
         
         private void InitializeUI()
         {
-            CreateEquipmentGrid();
             CreateInventoryGrid();
             CreateHotbar();
             CreateEquipmentSlots();
             
             if (inventoryPanel != null)
+            {
                 inventoryPanel.SetActive(false);
+                // Initialize scale for future animations
+                inventoryPanel.transform.localScale = Vector3.one;
+            }
             
             if (tooltipPanel != null)
                 tooltipPanel.SetActive(false);
         }
         
-        private void CreateEquipmentGrid()
-        {
-            if (inventorySlotPrefab == null || equipmentGridContainer == null)
-            {
-                Debug.LogWarning("InventoryUI: inventorySlotPrefab or equipmentGridContainer not assigned!");
-                return;
-            }
-            
-            for (int i = 0; i < 8; i++)
-            {
-                GameObject slotObj = Instantiate(inventorySlotPrefab, equipmentGridContainer);
-                InventorySlot slot = slotObj.GetComponent<InventorySlot>();
-                if (slot != null)
-                {
-                    slot.Initialize(this, i, true);
-                    equipmentSlots.Add(slot);
-                }
-            }
-        }
         
         private void CreateInventoryGrid()
         {
@@ -107,13 +118,14 @@ namespace GameFramework.UI
                 return;
             }
             
-            for (int i = 0; i < 32; i++)
+            // Create unified inventory grid for all items (equipment and regular items)
+            for (int i = 0; i < 40; i++) // Increased to 40 slots for more space
             {
                 GameObject slotObj = Instantiate(inventorySlotPrefab, inventoryGridContainer);
                 InventorySlot slot = slotObj.GetComponent<InventorySlot>();
                 if (slot != null)
                 {
-                    slot.Initialize(this, i + 8, false);
+                    slot.Initialize(this, i); // Simplified initialization
                     inventorySlots.Add(slot);
                 }
             }
@@ -127,13 +139,19 @@ namespace GameFramework.UI
                 return;
             }
             
-            for (int i = 0; i < 5; i++)
+            if (hotbarController == null)
+            {
+                Debug.LogWarning("InventoryUI: hotbarController is null! Cannot initialize hotbar slots.");
+                return;
+            }
+            
+            for (int i = 0; i < hotbarController.HotbarSize; i++)
             {
                 GameObject slotObj = Instantiate(hotbarSlotPrefab, hotbarContainer);
                 HotbarSlot slot = slotObj.GetComponent<HotbarSlot>();
                 if (slot != null)
                 {
-                    slot.Initialize(this, i);
+                    slot.Initialize(this, hotbarController, i);
                     hotbarSlots.Add(slot);
                 }
             }
@@ -147,17 +165,40 @@ namespace GameFramework.UI
                 return;
             }
             
+            if (equipmentController == null)
+            {
+                Debug.LogWarning("InventoryUI: equipmentController is null! Cannot initialize equipment slots.");
+                return;
+            }
+            
+            if (inventoryController == null)
+            {
+                Debug.LogWarning("InventoryUI: inventoryController is null! Cannot initialize equipment slots.");
+                return;
+            }
+            
+            Debug.Log($"[InventoryUI] Creating character equipment slots...");
+            
             var equipmentSlotTypes = System.Enum.GetValues(typeof(EquipmentSlot));
             foreach (EquipmentSlot slotType in equipmentSlotTypes)
             {
+                Debug.Log($"[InventoryUI] Creating equipment slot for: {slotType}");
+                
                 GameObject slotObj = Instantiate(equipmentSlotPrefab, equipmentSlotsContainer);
                 EquipmentSlotUI slot = slotObj.GetComponent<EquipmentSlotUI>();
                 if (slot != null)
                 {
-                    slot.Initialize(this, slotType);
+                    slot.Initialize(this, slotType, equipmentController, inventoryController);
                     characterEquipmentSlots.Add(slot);
+                    Debug.Log($"[InventoryUI] Successfully created equipment slot: {slotType}");
+                }
+                else
+                {
+                    Debug.LogError($"[InventoryUI] Failed to get EquipmentSlotUI component from prefab for slot: {slotType}");
                 }
             }
+            
+            Debug.Log($"[InventoryUI] Total character equipment slots created: {characterEquipmentSlots.Count}");
         }
         
         public void ToggleInventory()
@@ -168,61 +209,66 @@ namespace GameFramework.UI
                 return;
             }
             
+            // Prevent toggling while animating
+            if (isAnimating)
+                return;
+            
+            // Stop any current animation
+            if (currentAnimation != null)
+            {
+                StopCoroutine(currentAnimation);
+                currentAnimation = null;
+            }
+            
             isInventoryOpen = !isInventoryOpen;
-            inventoryPanel.SetActive(isInventoryOpen);
             
             if (isInventoryOpen)
             {
-                if (inventoryController != null && equipmentController != null)
+                if (inventoryController != null && equipmentController != null && hotbarController != null)
                 {
                     UpdateUI();
                 }
+                
                 Cursor.lockState = CursorLockMode.None;
                 Cursor.visible = true;
+                
+                // Start scale-in animation using a safe coroutine runner
+                currentAnimation = StartCoroutineIfPossible(AnimateScaleIn());
             }
             else
             {
                 Cursor.lockState = CursorLockMode.Locked;
                 Cursor.visible = false;
                 HideTooltip();
+                
+                // Start scale-out animation using a safe coroutine runner
+                currentAnimation = StartCoroutineIfPossible(AnimateScaleOut());
             }
         }
         
         public void SelectHotbarSlot(int index)
         {
-            if (hotbarSlots == null || index < 0 || index >= hotbarSlots.Count) return;
-            
-            currentHotbarIndex = index;
-            UpdateHotbarSelection();
-            
-            var item = GetHotbarItem(index);
-            if (item != null && item is EquippableItemDefinition equippable && equipmentController != null)
+            if (hotbarController != null)
             {
-                equipmentController.EquipItem(equippable);
+                hotbarController.SelectHotbarSlot(index);
             }
         }
         
         public void CycleEquippedItems(bool forward)
         {
-            if (forward)
+            if (hotbarController != null)
             {
-                currentHotbarIndex = (currentHotbarIndex + 1) % 5;
+                hotbarController.CycleSelection(forward);
             }
-            else
-            {
-                currentHotbarIndex = (currentHotbarIndex - 1 + 5) % 5;
-            }
-            
-            SelectHotbarSlot(currentHotbarIndex);
         }
         
         private void UpdateHotbarSelection()
         {
-            if (hotbarSlots == null) return;
+            if (hotbarSlots == null || hotbarController == null) return;
             
             for (int i = 0; i < hotbarSlots.Count; i++)
             {
-                hotbarSlots[i].SetSelected(i == currentHotbarIndex);
+                hotbarSlots[i].SetSelected(i == hotbarController.CurrentSelectedIndex);
             }
         }
         
@@ -237,35 +283,45 @@ namespace GameFramework.UI
         {
             if (inventoryController == null) return;
             
-            var items = inventoryController.GetAllItems();
-            if (items == null) return;
-            
-            // Update equipment slots (equippable items)
-            if (equipmentSlots != null)
+            var inventoryControllerImpl = inventoryController as InventoryController;
+            if (inventoryControllerImpl == null)
             {
-                var equippableItems = items.FindAll(item => item.Key is EquippableItemDefinition);
-                for (int i = 0; i < equipmentSlots.Count; i++)
+                // Fallback to old method if not using slot-based controller
+                UpdateInventorySlotsLegacy();
+                return;
+            }
+            
+            // Update all inventory slots using slot-based system
+            if (inventorySlots != null)
+            {
+                for (int i = 0; i < inventorySlots.Count; i++)
                 {
-                    if (i < equippableItems.Count)
+                    var itemStack = inventoryControllerImpl.GetItemAtSlot(i);
+                    if (itemStack != null)
                     {
-                        equipmentSlots[i].SetItem(equippableItems[i].Key, equippableItems[i].Value);
+                        inventorySlots[i].SetItem(itemStack.item, itemStack.quantity);
                     }
                     else
                     {
-                        equipmentSlots[i].SetItem(null, 0);
+                        inventorySlots[i].SetItem(null, 0);
                     }
                 }
             }
+        }
+        
+        private void UpdateInventorySlotsLegacy()
+        {
+            var items = inventoryController.GetAllItems();
+            if (items == null) return;
             
-            // Update regular inventory slots (non-equippable items)
+            // Update all inventory slots with all items (no separation)
             if (inventorySlots != null)
             {
-                var regularItems = items.FindAll(item => !(item.Key is EquippableItemDefinition));
                 for (int i = 0; i < inventorySlots.Count; i++)
                 {
-                    if (i < regularItems.Count)
+                    if (i < items.Count)
                     {
-                        inventorySlots[i].SetItem(regularItems[i].Key, regularItems[i].Value);
+                        inventorySlots[i].SetItem(items[i].Key, items[i].Value);
                     }
                     else
                     {
@@ -277,31 +333,79 @@ namespace GameFramework.UI
         
         private void UpdateHotbar()
         {
-            if (hotbarSlots == null) return;
+            if (hotbarSlots == null || hotbarController == null) return;
             
+            Debug.Log($"[InventoryUI] UpdateHotbar - hotbarSlots count: {hotbarSlots.Count}");
             for (int i = 0; i < hotbarSlots.Count; i++)
             {
-                var item = GetHotbarItem(i);
+                var item = hotbarController.GetHotbarItem(i);
+                Debug.Log($"[InventoryUI] UpdateHotbar slot {i} - item: {item?.itemName ?? "null"}");
                 hotbarSlots[i].SetItem(item);
             }
             UpdateHotbarSelection();
         }
         
-        private ItemDefinition GetHotbarItem(int index)
+        private void OnHotbarItemChanged(int slotIndex)
         {
-            if (inventoryController == null) return null;
-            
-            var items = inventoryController.GetAllItems();
-            if (items == null) return null;
-            
-            var equippableItems = items.FindAll(item => item.Key is EquippableItemDefinition);
-            return index < equippableItems.Count ? equippableItems[index].Key : null;
+            if (slotIndex >= 0 && slotIndex < hotbarSlots.Count)
+            {
+                var item = hotbarController.GetHotbarItem(slotIndex);
+                Debug.Log($"[InventoryUI] OnHotbarItemChanged slot {slotIndex} - item: {item?.itemName ?? "null"}");
+                hotbarSlots[slotIndex].SetItem(item);
+            }
+        }
+        
+        private void OnHotbarSelectionChanged(int newIndex)
+        {
+            UpdateHotbarSelection();
+        }
+        
+        private void OnDestroy()
+        {
+            // Unsubscribe from events to prevent memory leaks
+            if (hotbarController != null)
+            {
+                hotbarController.OnHotbarChanged -= OnHotbarItemChanged;
+                hotbarController.OnSelectionChanged -= OnHotbarSelectionChanged;
+            }
         }
         
         private void UpdateEquipmentSlots()
         {
-            // Update based on currently equipped items
-            // This will be implemented when we add the equipment slot logic
+            Debug.Log($"[InventoryUI] UpdateEquipmentSlots called - characterEquipmentSlots count: {characterEquipmentSlots.Count}");
+            
+            if (equipmentController == null)
+            {
+                Debug.LogWarning("[InventoryUI] UpdateEquipmentSlots: equipmentController is null");
+                return;
+            }
+            
+            // Update each character equipment slot with currently equipped items
+            foreach (var equipmentSlot in characterEquipmentSlots)
+            {
+                if (equipmentSlot != null)
+                {
+                    // Get the slot type from the equipment slot
+                    var slotType = equipmentSlot.SlotType;
+                    string slotName = slotType.ToString(); // Convert enum to string
+                    
+                    Debug.Log($"[InventoryUI] Checking equipment slot: {slotName}");
+                    
+                    // Get the currently equipped item for this slot
+                    var equippedItem = equipmentController.GetEquippedItem(slotName);
+                    
+                    if (equippedItem != null)
+                    {
+                        Debug.Log($"[InventoryUI] Found equipped item in {slotName}: {equippedItem.item.itemName}");
+                        equipmentSlot.SetEquippedItem(equippedItem.item);
+                    }
+                    else
+                    {
+                        Debug.Log($"[InventoryUI] No item equipped in slot: {slotName}");
+                        equipmentSlot.SetEquippedItem(null);
+                    }
+                }
+            }
         }
         
         public void ShowTooltip(ItemDefinition item, Vector3 position)
@@ -312,11 +416,13 @@ namespace GameFramework.UI
             tooltipDescription.text = item.description;
             tooltipPanel.transform.position = position;
             tooltipPanel.SetActive(true);
+            isTooltipVisible = true;
         }
         
         public void HideTooltip()
         {
             tooltipPanel.SetActive(false);
+            isTooltipVisible = false;
         }
         
         public void OnItemDrag(ItemDefinition item, int fromSlot, bool isEquipment)
@@ -331,20 +437,21 @@ namespace GameFramework.UI
         
         public void PlaceSplitStack(ItemDefinition item, int amount)
         {
-            // Find first empty slot in inventory
-            foreach (var slot in inventorySlots)
+            var inventoryControllerImpl = inventoryController as InventoryController;
+            if (inventoryControllerImpl != null)
             {
-                if (slot.CurrentItem == null)
+                // Use slot-based system
+                int emptySlot = inventoryControllerImpl.GetFirstEmptySlot();
+                if (emptySlot >= 0)
                 {
-                    slot.SetItem(item, amount);
-                    break;
+                    inventoryControllerImpl.SetItemAtSlot(emptySlot, item, amount);
+                    UpdateUI();
                 }
             }
-            
-            // If no empty slot in regular inventory, try equipment slots
-            if (item is EquippableItemDefinition)
+            else
             {
-                foreach (var slot in equipmentSlots)
+                // Fallback to UI-based search
+                foreach (var slot in inventorySlots)
                 {
                     if (slot.CurrentItem == null)
                     {
@@ -353,6 +460,95 @@ namespace GameFramework.UI
                     }
                 }
             }
+        }
+        
+        private IEnumerator AnimateScaleIn()
+        {
+            isAnimating = true;
+            
+            // Set initial scale and activate panel
+            inventoryPanel.transform.localScale = Vector3.one * startScale;
+            inventoryPanel.SetActive(true);
+            
+            float elapsedTime = 0f;
+            
+            while (elapsedTime < animationDuration)
+            {
+                elapsedTime += Time.unscaledDeltaTime;
+                float progress = elapsedTime / animationDuration;
+                float curveValue = scaleCurve.Evaluate(progress);
+                
+                // Interpolate from startScale to 1.0
+                float currentScale = Mathf.Lerp(startScale, 1f, curveValue);
+                inventoryPanel.transform.localScale = Vector3.one * currentScale;
+                
+                yield return null;
+            }
+            
+            // Ensure final scale is exactly 1
+            inventoryPanel.transform.localScale = Vector3.one;
+            isAnimating = false;
+        }
+        
+        private IEnumerator AnimateScaleOut()
+        {
+            isAnimating = true;
+            
+            float elapsedTime = 0f;
+            
+            while (elapsedTime < animationDuration)
+            {
+                elapsedTime += Time.unscaledDeltaTime;
+                float progress = elapsedTime / animationDuration;
+                float curveValue = scaleCurve.Evaluate(1f - progress); // Reverse the curve
+                
+                // Interpolate from 1.0 to startScale
+                float currentScale = Mathf.Lerp(startScale, 1f, curveValue);
+                inventoryPanel.transform.localScale = Vector3.one * currentScale;
+                
+                yield return null;
+            }
+            
+            // Ensure final scale and deactivate panel
+            inventoryPanel.transform.localScale = Vector3.one * startScale;
+            inventoryPanel.SetActive(false);
+            isAnimating = false;
+        }
+        
+        private Coroutine StartCoroutineIfPossible(IEnumerator routine)
+        {
+            // First try to start on this component if it's active
+            if (gameObject.activeInHierarchy)
+            {
+                return StartCoroutine(routine);
+            }
+            
+            // If this component is not active, find an alternative MonoBehaviour
+            var characterController = FindObjectOfType<GameFramework.Character.FirstPersonCharacterController>();
+            if (characterController != null && characterController.gameObject.activeInHierarchy)
+            {
+                return characterController.StartCoroutine(routine);
+            }
+            
+            // Last resort: find any active MonoBehaviour in the scene
+            var activeMonoBehaviour = FindObjectOfType<MonoBehaviour>();
+            if (activeMonoBehaviour != null && activeMonoBehaviour.gameObject.activeInHierarchy)
+            {
+                return activeMonoBehaviour.StartCoroutine(routine);
+            }
+            
+            // If we can't find any active MonoBehaviour, fall back to immediate show/hide
+            if (isInventoryOpen)
+            {
+                inventoryPanel.SetActive(true);
+                inventoryPanel.transform.localScale = Vector3.one;
+            }
+            else
+            {
+                inventoryPanel.SetActive(false);
+            }
+            
+            return null;
         }
     }
 }

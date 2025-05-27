@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using UnityEngine;
 using GameFramework.Core.Interfaces;
+using GameFramework.Items.Abilities;
 
 namespace GameFramework.Items
 {
@@ -10,12 +11,14 @@ namespace GameFramework.Items
         public EquippableItemDefinition item;
         public GameObject instantiatedPrefab;
         public string slotName;
+        public List<Component> grantedAbilityComponents;
         
         public EquippedItem(EquippableItemDefinition item, GameObject instantiatedPrefab, string slotName)
         {
             this.item = item;
             this.instantiatedPrefab = instantiatedPrefab;
             this.slotName = slotName;
+            this.grantedAbilityComponents = new List<Component>();
         }
     }
 
@@ -36,7 +39,7 @@ namespace GameFramework.Items
         [SerializeField] private AudioSource audioSource;
         
         [Header("Debug")]
-        [SerializeField] private bool debugMode = false;
+        [SerializeField] private bool debugMode = true;
         
         private Dictionary<string, EquippedItem> equippedItems = new Dictionary<string, EquippedItem>();
         private Dictionary<string, Transform> attachmentPoints = new Dictionary<string, Transform>();
@@ -141,14 +144,26 @@ namespace GameFramework.Items
                 return false;
             }
             
-            // Check if slot is already occupied
+            // Check if slot is already occupied with the SAME item
             if (equippedItems.ContainsKey(slotName))
             {
-                if (debugMode)
+                var currentItem = equippedItems[slotName];
+                if (currentItem.item == item)
                 {
-                    Debug.Log($"Slot {slotName} is already occupied");
+                    if (debugMode)
+                    {
+                        Debug.Log($"Item {item.GetDisplayName()} is already equipped in {slotName}");
+                    }
+                    return false; // Same item already equipped
                 }
-                return false;
+                else
+                {
+                    if (debugMode)
+                    {
+                        Debug.Log($"Slot {slotName} is occupied by {currentItem.item.GetDisplayName()}, will be replaced with {item.GetDisplayName()}");
+                    }
+                    // Different item - allow replacement
+                }
             }
             
             return true;
@@ -182,12 +197,23 @@ namespace GameFramework.Items
                 // Apply attachment offset and rotation
                 equippedObject.transform.localPosition = item.attachmentOffset;
                 equippedObject.transform.localRotation = Quaternion.Euler(item.attachmentRotation);
-                equippedObject.transform.localScale = item.attachmentScale;
+                
+                // Set world scale to prevent parent scaling from affecting equipment geometry
+                Vector3 parentScale = attachPoint.lossyScale;
+                Vector3 correctedScale = new Vector3(
+                    item.attachmentScale.x / parentScale.x,
+                    item.attachmentScale.y / parentScale.y,
+                    item.attachmentScale.z / parentScale.z
+                );
+                equippedObject.transform.localScale = correctedScale;
             }
             
             // Create equipped item entry
             EquippedItem equippedItem = new EquippedItem(item, equippedObject, slotName);
             equippedItems[slotName] = equippedItem;
+            
+            // Add ability components to the equipper
+            AddAbilityComponents(item, equippedItem);
             
             // Play equip sound
             if (item.equipSound != null && audioSource != null)
@@ -208,6 +234,9 @@ namespace GameFramework.Items
             {
                 Debug.Log($"Unequipping {equippedItem.item.GetDisplayName()} from {slotName}");
             }
+            
+            // Remove ability components from the equipper
+            RemoveAbilityComponents(equippedItem);
             
             // Destroy the instantiated prefab
             if (equippedItem.instantiatedPrefab != null)
@@ -264,6 +293,71 @@ namespace GameFramework.Items
         public bool IsSlotOccupied(string slotName)
         {
             return equippedItems.ContainsKey(slotName);
+        }
+        
+        private void AddAbilityComponents(EquippableItemDefinition item, EquippedItem equippedItem)
+        {
+            ScriptableObject[] abilityTemplates = item.GetAbilityTemplates();
+            
+            foreach (ScriptableObject template in abilityTemplates)
+            {
+                Component newComponent = null;
+                
+                // Handle different types of ability templates
+                if (template is DoubleJumpAbilityTemplate doubleJumpTemplate)
+                {
+                    newComponent = doubleJumpTemplate.CreateAbilityComponent(gameObject);
+                }
+                // Add more template types here as needed
+                
+                // Activate the ability
+                if (newComponent is IEquipmentAbility newAbility)
+                {
+                    newAbility.OnEquipped(gameObject);
+                    equippedItem.grantedAbilityComponents.Add(newComponent);
+                    
+                    if (debugMode)
+                    {
+                        Debug.Log($"Added ability component: {newComponent.GetType().Name}");
+                    }
+                }
+            }
+        }
+        
+        private void RemoveAbilityComponents(EquippedItem equippedItem)
+        {
+            foreach (Component component in equippedItem.grantedAbilityComponents)
+            {
+                if (component != null && component is IEquipmentAbility ability)
+                {
+                    ability.OnUnequipped(gameObject);
+                    
+                    if (debugMode)
+                    {
+                        Debug.Log($"Removed ability component: {component.GetType().Name}");
+                    }
+                    
+                    Destroy(component);
+                }
+            }
+            equippedItem.grantedAbilityComponents.Clear();
+        }
+        
+        private void CopyComponentValues(Component source, Component target)
+        {
+            if (source == null || target == null || source.GetType() != target.GetType())
+                return;
+                
+            System.Type type = source.GetType();
+            var fields = type.GetFields(System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+            
+            foreach (var field in fields)
+            {
+                if (!field.IsStatic && field.FieldType.IsSerializable)
+                {
+                    field.SetValue(target, field.GetValue(source));
+                }
+            }
         }
         
         // Debug method to display equipped items

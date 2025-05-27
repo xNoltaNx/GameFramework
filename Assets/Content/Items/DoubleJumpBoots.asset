@@ -1,0 +1,35 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 896907493b5923548b44880c4f1b4a8b, type: 3}
+  m_Name: DoubleJumpBoots
+  m_EditorClassIdentifier: 
+  itemName: Double Jump Boots
+  description: Mystical boots that grant the wearer the ability to jump twice in
+    mid-air.
+  icon: {fileID: 21300000, guid: 6d1e53993fda93c4fa959ce99c87eae9, type: 3}
+  isStackable: 0
+  maxStackSize: 1
+  weight: 2
+  value: 150
+  worldPrefab: {fileID: 4986423184134190654, guid: b8fa0bf75aeec4d4e91e9ffd152320e9, type: 3}
+  pickupSound: {fileID: 0}
+  dropSound: {fileID: 0}
+  equipmentSlot: 0
+  equipmentPrefab: {fileID: 5529129200242870658, guid: 31be558a383931d49b717f9c145b8484, type: 3}
+  attachmentOffset: {x: 0, y: 0, z: 0}
+  attachmentRotation: {x: 0, y: 0, z: 0}
+  attachmentScale: {x: 1, y: 1, z: 1}
+  alternativeSlots: 
+  equipSound: {fileID: 0}
+  unequipSound: {fileID: 0}
+  abilityTemplates:
+  - {fileID: 11400000, guid: 106fc8e467d9f794c9ad66fa0650e795, type: 2}

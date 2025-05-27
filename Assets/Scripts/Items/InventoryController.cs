@@ -20,17 +20,19 @@ namespace GameFramework.Items
     public class InventoryController : MonoBehaviour, IInventoryController
     {
         [Header("Inventory Settings")]
-        [SerializeField] private int capacity = 20;
+        [SerializeField] private int capacity = 40; // Increased for unified inventory
         [SerializeField] private bool unlimitedCapacity = false;
         
         [Header("Auto-Equip Settings")]
         [SerializeField] private bool autoEquipOnPickup = true;
         
         [Header("Debug")]
-        [SerializeField] private bool debugMode = false;
+        [SerializeField] private bool debugMode = true;
         
+        private ItemStack[] inventorySlots;
         private List<ItemStack> items = new List<ItemStack>();
         private IEquipmentController equipmentController;
+        private GameFramework.UI.HotbarController hotbarController;
         
         public IReadOnlyList<ItemStack> Items => items;
         public int Capacity => unlimitedCapacity ? int.MaxValue : capacity;
@@ -42,11 +44,25 @@ namespace GameFramework.Items
                 items = new List<ItemStack>();
             }
             
+            // Initialize slot-based inventory array
+            int totalCapacity = unlimitedCapacity ? 100 : capacity;
+            inventorySlots = new ItemStack[totalCapacity];
+            
+            // Sync existing items to slots if any
+            SyncItemsListToSlots();
+            
             // Find equipment controller on the same GameObject or parent
             equipmentController = GetComponent<IEquipmentController>();
             if (equipmentController == null)
             {
                 equipmentController = GetComponentInParent<IEquipmentController>();
+            }
+            
+            // Find hotbar controller
+            hotbarController = GetComponent<GameFramework.UI.HotbarController>();
+            if (hotbarController == null)
+            {
+                hotbarController = FindObjectOfType<GameFramework.UI.HotbarController>();
             }
         }
         
@@ -100,42 +116,37 @@ namespace GameFramework.Items
                 Debug.Log($"Adding {quantity}x {item.GetDisplayName()} to inventory");
             }
             
-            // Check for auto-equip before adding to inventory
-            bool itemWasAutoEquipped = TryAutoEquipItem(item);
-            
-            // If item was auto-equipped and it's not stackable, don't add to inventory
-            if (itemWasAutoEquipped && !item.CanStack())
+            // Add items to inventory first, then check for auto-equip
+            // This ensures items are always available in inventory for hotbar reference
+            if (item.CanStack())
             {
-                quantity--; // Reduce quantity by 1 for the equipped item
-                if (quantity <= 0)
-                    return true; // All items were equipped, nothing to add to inventory
+                AddStackableItemToSlots(item, quantity);
+            }
+            else
+            {
+                AddNonStackableItemToSlots(item, quantity);
             }
             
-            // Add remaining items to inventory
-            if (quantity > 0)
-            {
-                if (item.CanStack())
-                {
-                    AddStackableItem(item, quantity);
-                }
-                else
-                {
-                    AddNonStackableItem(item, quantity);
-                }
-            }
+            // Sync slots to list for backwards compatibility
+            SyncSlotsToItemsList();
+            
+            // After adding to inventory, try to auto-equip the first item
+            TryAutoEquipItem(item);
             
             return true;
         }
         
-        private void AddStackableItem(ItemDefinition item, int quantity)
+        private void AddStackableItemToSlots(ItemDefinition item, int quantity)
         {
             while (quantity > 0)
             {
-                ItemStack existingStack = FindItemStack(item);
+                // Find existing stack with available space
+                int existingSlotIndex = FindStackableSlot(item);
                 
-                if (existingStack != null)
+                if (existingSlotIndex >= 0)
                 {
                     // Add to existing stack
+                    var existingStack = inventorySlots[existingSlotIndex];
                     int availableSpace = item.maxStackSize - existingStack.quantity;
                     int amountToAdd = Mathf.Min(quantity, availableSpace);
                     
@@ -144,20 +155,48 @@ namespace GameFramework.Items
                 }
                 else
                 {
-                    // Create new stack
-                    int amountToAdd = Mathf.Min(quantity, item.maxStackSize);
-                    items.Add(new ItemStack(item, amountToAdd));
-                    quantity -= amountToAdd;
+                    // Create new stack in empty slot
+                    int emptySlot = GetFirstEmptySlot();
+                    if (emptySlot >= 0)
+                    {
+                        int amountToAdd = Mathf.Min(quantity, item.maxStackSize);
+                        inventorySlots[emptySlot] = new ItemStack(item, amountToAdd);
+                        quantity -= amountToAdd;
+                    }
+                    else
+                    {
+                        // No space available
+                        break;
+                    }
                 }
             }
         }
         
-        private void AddNonStackableItem(ItemDefinition item, int quantity)
+        private void AddNonStackableItemToSlots(ItemDefinition item, int quantity)
         {
             for (int i = 0; i < quantity; i++)
             {
-                items.Add(new ItemStack(item, 1));
+                int emptySlot = GetFirstEmptySlot();
+                if (emptySlot >= 0)
+                {
+                    inventorySlots[emptySlot] = new ItemStack(item, 1);
+                }
+                else
+                {
+                    // No space available
+                    break;
+                }
             }
+        }
+        
+        private void AddStackableItem(ItemDefinition item, int quantity)
+        {
+            AddStackableItemToSlots(item, quantity);
+        }
+        
+        private void AddNonStackableItem(ItemDefinition item, int quantity)
+        {
+            AddNonStackableItemToSlots(item, quantity);
         }
         
         public bool RemoveItem(ItemDefinition item, int quantity = 1)
@@ -171,10 +210,11 @@ namespace GameFramework.Items
             
             int remainingToRemove = quantity;
             
-            for (int i = items.Count - 1; i >= 0 && remainingToRemove > 0; i--)
+            // Remove from slots
+            for (int i = inventorySlots.Length - 1; i >= 0 && remainingToRemove > 0; i--)
             {
-                ItemStack stack = items[i];
-                if (stack.item == item)
+                var stack = inventorySlots[i];
+                if (stack != null && stack.item == item)
                 {
                     int amountToRemove = Mathf.Min(remainingToRemove, stack.quantity);
                     stack.quantity -= amountToRemove;
@@ -182,10 +222,13 @@ namespace GameFramework.Items
                     
                     if (stack.quantity <= 0)
                     {
-                        items.RemoveAt(i);
+                        inventorySlots[i] = null;
                     }
                 }
             }
+            
+            // Sync to list for backwards compatibility
+            SyncSlotsToItemsList();
             
             return true;
         }
@@ -228,6 +271,19 @@ namespace GameFramework.Items
                 }
             }
             return null;
+        }
+        
+        private int FindStackableSlot(ItemDefinition item)
+        {
+            for (int i = 0; i < inventorySlots.Length; i++)
+            {
+                var stack = inventorySlots[i];
+                if (stack != null && stack.item == item && stack.quantity < item.maxStackSize)
+                {
+                    return i;
+                }
+            }
+            return -1;
         }
         
         public void Clear()
@@ -291,12 +347,185 @@ namespace GameFramework.Items
             // Try to equip the item
             bool equipped = equipmentController.EquipItem(equippableItem, slotName);
             
-            if (equipped && debugMode)
+            if (equipped)
             {
-                Debug.Log($"Auto-equipped {item.GetDisplayName()} to {slotName} slot");
+                // Remove one instance of the equipped item from inventory since it's now equipped
+                if (RemoveItem(equippableItem, 1))
+                {
+                    if (debugMode)
+                    {
+                        Debug.Log($"Auto-equipped {item.GetDisplayName()} to {slotName} slot and removed from inventory");
+                    }
+                }
+                else
+                {
+                    if (debugMode)
+                    {
+                        Debug.LogWarning($"Failed to remove {item.GetDisplayName()} from inventory after auto-equipping");
+                    }
+                }
+                
+                // If this is a main hand item and we have a hotbar controller, 
+                // try to add it to the first available hotbar slot and select it
+                if (hotbarController != null && 
+                    (equippableItem.equipmentSlot == EquipmentSlot.MainHand || 
+                     equippableItem.equipmentSlot == EquipmentSlot.TwoHanded))
+                {
+                    bool addedToHotbar = hotbarController.AddItemToHotbar(equippableItem);
+                    if (addedToHotbar)
+                    {
+                        // Find the slot where the item was added and select it
+                        int slotIndex = hotbarController.FindItemInHotbar(equippableItem);
+                        if (slotIndex >= 0)
+                        {
+                            hotbarController.SelectHotbarSlot(slotIndex);
+                        }
+                        
+                        if (debugMode)
+                        {
+                            Debug.Log($"Auto-added {item.GetDisplayName()} to hotbar slot {slotIndex}");
+                        }
+                    }
+                }
             }
             
             return equipped;
+        }
+        
+        // Slot-based inventory management methods
+        public ItemStack GetItemAtSlot(int slotIndex)
+        {
+            if (slotIndex < 0 || slotIndex >= inventorySlots.Length)
+                return null;
+            return inventorySlots[slotIndex];
+        }
+        
+        public bool SetItemAtSlot(int slotIndex, ItemDefinition item, int quantity)
+        {
+            if (slotIndex < 0 || slotIndex >= inventorySlots.Length)
+                return false;
+                
+            if (item == null || quantity <= 0)
+            {
+                inventorySlots[slotIndex] = null;
+                SyncSlotsToItemsList();
+                return true;
+            }
+            
+            inventorySlots[slotIndex] = new ItemStack(item, quantity);
+            SyncSlotsToItemsList();
+            return true;
+        }
+        
+        public bool SwapSlots(int fromSlot, int toSlot)
+        {
+            if (fromSlot < 0 || fromSlot >= inventorySlots.Length ||
+                toSlot < 0 || toSlot >= inventorySlots.Length)
+                return false;
+                
+            var temp = inventorySlots[fromSlot];
+            inventorySlots[fromSlot] = inventorySlots[toSlot];
+            inventorySlots[toSlot] = temp;
+            
+            SyncSlotsToItemsList();
+            return true;
+        }
+        
+        public bool MoveItemToSlot(int fromSlot, int toSlot, int quantity = -1)
+        {
+            if (fromSlot < 0 || fromSlot >= inventorySlots.Length ||
+                toSlot < 0 || toSlot >= inventorySlots.Length)
+                return false;
+                
+            var fromStack = inventorySlots[fromSlot];
+            if (fromStack == null || fromStack.quantity <= 0)
+                return false;
+                
+            var toStack = inventorySlots[toSlot];
+            
+            // If quantity is -1, move entire stack
+            if (quantity == -1)
+                quantity = fromStack.quantity;
+                
+            quantity = Mathf.Min(quantity, fromStack.quantity);
+            
+            if (toStack == null)
+            {
+                // Move to empty slot
+                inventorySlots[toSlot] = new ItemStack(fromStack.item, quantity);
+                fromStack.quantity -= quantity;
+                
+                if (fromStack.quantity <= 0)
+                    inventorySlots[fromSlot] = null;
+            }
+            else if (toStack.item == fromStack.item && fromStack.item.CanStack())
+            {
+                // Combine stacks
+                int availableSpace = fromStack.item.maxStackSize - toStack.quantity;
+                int amountToMove = Mathf.Min(quantity, availableSpace);
+                
+                if (amountToMove <= 0)
+                    return false; // Can't move any
+                    
+                toStack.quantity += amountToMove;
+                fromStack.quantity -= amountToMove;
+                
+                if (fromStack.quantity <= 0)
+                    inventorySlots[fromSlot] = null;
+            }
+            else
+            {
+                // Can't combine - would need to swap instead
+                return false;
+            }
+            
+            SyncSlotsToItemsList();
+            return true;
+        }
+        
+        public int GetTotalSlots()
+        {
+            return inventorySlots.Length;
+        }
+        
+        public int GetFirstEmptySlot()
+        {
+            for (int i = 0; i < inventorySlots.Length; i++)
+            {
+                if (inventorySlots[i] == null)
+                    return i;
+            }
+            return -1;
+        }
+        
+        private void SyncSlotsToItemsList()
+        {
+            items.Clear();
+            foreach (var slot in inventorySlots)
+            {
+                if (slot != null && slot.quantity > 0)
+                {
+                    items.Add(slot);
+                }
+            }
+        }
+        
+        private void SyncItemsListToSlots()
+        {
+            // Clear slots
+            for (int i = 0; i < inventorySlots.Length; i++)
+            {
+                inventorySlots[i] = null;
+            }
+            
+            // Place items back into slots
+            for (int i = 0; i < items.Count && i < inventorySlots.Length; i++)
+            {
+                if (items[i] != null && items[i].quantity > 0)
+                {
+                    inventorySlots[i] = items[i];
+                }
+            }
         }
     }
 }

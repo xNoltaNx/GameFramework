@@ -21,6 +21,9 @@ namespace GameFramework.Character
         [SerializeField] private EquipmentController equipmentController;
         [SerializeField] private InteractionController interactionController;
         
+        [Header("UI References")]
+        [SerializeField] private GameFramework.UI.InventoryUI inventoryUI;
+        
         private IInputHandler input;
         private ICameraController camera;
         private ILocomotionController locomotion;
@@ -100,6 +103,16 @@ namespace GameFramework.Character
                     interactionController = gameObject.AddComponent<InteractionController>();
                 }
             }
+            
+            // UI References
+            if (inventoryUI == null)
+            {
+                inventoryUI = FindObjectOfType<GameFramework.UI.InventoryUI>();
+                if (inventoryUI == null)
+                {
+                    Debug.LogWarning($"FirstPersonCharacterController on {gameObject.name} could not find InventoryUI - camera control during inventory will not work properly.");
+                }
+            }
         }
 
         private void InitializeInterfaces()
@@ -132,11 +145,18 @@ namespace GameFramework.Character
         {
             if (input == null || camera == null || locomotion == null) return;
 
-            camera.HandleLookInput(input.LookInput);
-            locomotion.HandleMovement(input.MovementInput, input.SprintHeld, input.CrouchHeld);
-            locomotion.HandleJump(input.JumpPressed, input.JumpHeld);
+            // Check if inventory is open to disable camera and movement
+            bool isInventoryOpen = inventoryUI != null && inventoryUI.IsInventoryOpen;
             
-            // Handle interactions
+            if (!isInventoryOpen)
+            {
+                // Only process camera and movement input if inventory is closed
+                camera.HandleLookInput(input.LookInput);
+                locomotion.HandleMovement(input.MovementInput, input.SprintHeld, input.CrouchHeld);
+                locomotion.HandleJump(input.JumpPressed, input.JumpHeld);
+            }
+            
+            // Handle interactions (should work even with inventory open)
             if (interaction != null && input.InteractPressed)
             {
                 Debug.Log("Interact pressed - calling HandleInteraction()");

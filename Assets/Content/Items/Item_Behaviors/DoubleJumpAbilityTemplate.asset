@@ -1,0 +1,28 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c34cd141c6f9b8348bbba0b334c79996, type: 3}
+  m_Name: DoubleJumpAbilityTemplate
+  m_EditorClassIdentifier: 
+  doubleJumpHeightMultiplier: 0.8
+  resetDoubleJumpOnWallContact: 1
+  doubleJumpSound: {fileID: 0}
+  enableWallJump: 1
+  wallJumpForce: 20
+  wallJumpUpwardForce: 10
+  wallDetectionDistance: 2
+  wallLayers:
+    serializedVersion: 2
+    m_Bits: 4294967295
+  wallJumpCooldown: 0.2
+  wallJumpResetsDoubleJump: 1
+  jumpEffectPrefab: {fileID: 0}
+  jumpTrailColor: {r: 0, g: 1, b: 1, a: 1}

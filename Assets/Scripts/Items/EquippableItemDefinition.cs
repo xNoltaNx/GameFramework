@@ -1,5 +1,6 @@
 using UnityEngine;
 using System.Collections.Generic;
+using GameFramework.Core.Interfaces;
 
 namespace GameFramework.Items
 {
@@ -22,6 +23,9 @@ namespace GameFramework.Items
         public AudioClip equipSound;
         public AudioClip unequipSound;
         
+        [Header("Equipment Abilities")]
+        [SerializeField] private ScriptableObject[] abilityTemplates;
+        
         public override string GetDisplayName()
         {
             return $"{itemName} ({equipmentSlot})";
@@ -35,6 +39,11 @@ namespace GameFramework.Items
         public bool CanEquipToSlot(EquipmentSlot slot)
         {
             return equipmentSlot == slot || alternativeSlots.Contains(slot);
+        }
+        
+        public ScriptableObject[] GetAbilityTemplates()
+        {
+            return abilityTemplates ?? new ScriptableObject[0];
         }
     }
     

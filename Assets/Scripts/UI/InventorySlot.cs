@@ -1,8 +1,10 @@
 using UnityEngine;
 using UnityEngine.UI;
 using UnityEngine.EventSystems;
+using UnityEngine.InputSystem;
 using TMPro;
 using GameFramework.Items;
+using GameFramework.Core.Interfaces;
 
 namespace GameFramework.UI
 {
@@ -20,17 +22,15 @@ namespace GameFramework.UI
         private ItemDefinition currentItem;
         private int stackCount;
         private int slotIndex;
-        private bool isEquipmentSlot;
         private bool isDragging;
-        private GameObject dragIcon;
         
         public ItemDefinition CurrentItem => currentItem;
+        public int SlotIndex => slotIndex;
         
-        public void Initialize(InventoryUI ui, int index, bool equipmentSlot)
+        public void Initialize(InventoryUI ui, int index)
         {
             inventoryUI = ui;
             slotIndex = index;
-            isEquipmentSlot = equipmentSlot;
             
             if (itemIcon == null) itemIcon = GetComponentInChildren<Image>();
             if (stackCountText == null) stackCountText = GetComponentInChildren<TextMeshProUGUI>();
@@ -72,8 +72,7 @@ namespace GameFramework.UI
             if (currentItem != null && !isDragging)
             {
                 background.color = highlightColor;
-                Vector3 tooltipPosition = transform.position + Vector3.up * 100f;
-                inventoryUI.ShowTooltip(currentItem, tooltipPosition);
+                inventoryUI.ShowTooltip(currentItem, Mouse.current.position.ReadValue());
             }
         }
         
@@ -94,40 +93,20 @@ namespace GameFramework.UI
             background.color = normalColor;
             inventoryUI.HideTooltip();
             
-            // Create drag icon
-            dragIcon = new GameObject("DragIcon");
-            dragIcon.transform.SetParent(transform.root, false);
-            dragIcon.transform.SetAsLastSibling();
-            
-            Image dragImage = dragIcon.AddComponent<Image>();
-            dragImage.sprite = currentItem.icon;
-            dragImage.raycastTarget = false;
-            
-            CanvasGroup canvasGroup = dragIcon.AddComponent<CanvasGroup>();
-            canvasGroup.alpha = 0.8f;
-            canvasGroup.blocksRaycasts = false;
-            
-            RectTransform dragRect = dragIcon.GetComponent<RectTransform>();
-            dragRect.sizeDelta = itemIcon.rectTransform.sizeDelta;
+            // Use drag visual manager
+            DragVisualManager.Instance.StartDrag(currentItem, eventData.position);
         }
         
         public void OnDrag(PointerEventData eventData)
         {
-            if (dragIcon != null)
-            {
-                dragIcon.transform.position = eventData.position;
-            }
+            DragVisualManager.Instance.UpdateDragPosition(eventData.position);
         }
         
         public void OnEndDrag(PointerEventData eventData)
         {
             isDragging = false;
             
-            if (dragIcon != null)
-            {
-                Destroy(dragIcon);
-                dragIcon = null;
-            }
+            DragVisualManager.Instance.StopDrag();
             
             // Check if dropped on valid target
             if (eventData.pointerEnter != null)
@@ -149,50 +128,116 @@ namespace GameFramework.UI
         public void OnDrop(PointerEventData eventData)
         {
             var draggedSlot = eventData.pointerDrag?.GetComponent<InventorySlot>();
+            var draggedEquipmentSlot = eventData.pointerDrag?.GetComponent<EquipmentSlotUI>();
+            
             if (draggedSlot != null && draggedSlot != this)
             {
                 HandleSlotDrop(draggedSlot);
+            }
+            else if (draggedEquipmentSlot != null)
+            {
+                HandleEquipmentSlotDrop(draggedEquipmentSlot);
             }
         }
         
         private void HandleSlotDrop(InventorySlot other)
         {
+            var inventoryController = inventoryUI.GetComponent<IInventoryController>() as InventoryController;
+            if (inventoryController == null)
+                inventoryController = FindObjectOfType<InventoryController>();
+                
+            if (inventoryController == null)
+            {
+                Debug.LogWarning("InventoryController not found - cannot handle slot drop");
+                return;
+            }
+            
             // Handle combining stacks or swapping items
             if (other.currentItem == currentItem && currentItem != null && currentItem.isStackable)
             {
-                // Combine stacks
-                int totalStack = stackCount + other.stackCount;
-                if (totalStack <= currentItem.maxStackSize)
+                // Try to combine stacks using inventory controller
+                if (inventoryController.MoveItemToSlot(other.slotIndex, slotIndex))
                 {
-                    SetItem(currentItem, totalStack);
-                    other.SetItem(null, 0);
-                }
-                else
-                {
-                    SetItem(currentItem, currentItem.maxStackSize);
-                    other.SetItem(currentItem, totalStack - currentItem.maxStackSize);
+                    // Success - update UI
+                    inventoryUI.UpdateUI();
                 }
             }
             else
             {
-                // Swap items
-                var tempItem = currentItem;
-                var tempCount = stackCount;
-                
-                SetItem(other.currentItem, other.stackCount);
-                other.SetItem(tempItem, tempCount);
+                // Swap items using inventory controller
+                if (inventoryController.SwapSlots(other.slotIndex, slotIndex))
+                {
+                    // Success - update UI
+                    inventoryUI.UpdateUI();
+                }
             }
-            
-            inventoryUI.UpdateUI();
         }
         
         private void HandleEquipmentDrop(EquipmentSlotUI equipmentSlot)
         {
-            if (currentItem is EquippableItemDefinition equippable)
+            // This method is called from OnEndDrag when dropping on equipment
+            // The actual equipping will be handled by the EquipmentSlotUI.OnDrop method
+            // which will call back to remove the item from this slot
+        }
+        
+        public void RemoveItemForEquipping()
+        {
+            // Public method to allow EquipmentSlotUI to remove item from this slot
+            var inventoryControllerImpl = inventoryUI.GetComponent<IInventoryController>() as InventoryController;
+            if (inventoryControllerImpl == null)
+                inventoryControllerImpl = FindObjectOfType<InventoryController>();
+            
+            if (inventoryControllerImpl != null)
             {
-                equipmentSlot.EquipItem(equippable);
-                SetItem(null, 0);
-                inventoryUI.UpdateUI();
+                inventoryControllerImpl.SetItemAtSlot(slotIndex, null, 0);
+            }
+        }
+        
+        private void HandleEquipmentSlotDrop(EquipmentSlotUI equipmentSlot)
+        {
+            // Get inventory controller to properly manage items
+            var inventoryControllerImpl = inventoryUI.GetComponent<IInventoryController>() as InventoryController;
+            if (inventoryControllerImpl == null)
+                inventoryControllerImpl = FindObjectOfType<InventoryController>();
+            
+            if (inventoryControllerImpl == null)
+            {
+                Debug.LogWarning("InventoryController not found - cannot handle equipment drop");
+                return;
+            }
+            
+            // Handle dropping from an equipment slot to inventory slot
+            if (equipmentSlot.CurrentEquippedItem != null)
+            {
+                if (currentItem == null)
+                {
+                    // Empty slot - place unequipped item here
+                    inventoryControllerImpl.SetItemAtSlot(slotIndex, equipmentSlot.CurrentEquippedItem, 1);
+                    equipmentSlot.UnequipItem();
+                    inventoryUI.UpdateUI();
+                }
+                else if (currentItem is EquippableItemDefinition currentEquippable)
+                {
+                    // Both slots have items - validate swap first
+                    if (currentEquippable.equipmentSlot == equipmentSlot.SlotType ||
+                        (equipmentSlot.SlotType == EquipmentSlot.MainHand && currentEquippable.equipmentSlot == EquipmentSlot.TwoHanded) ||
+                        (equipmentSlot.SlotType == EquipmentSlot.OffHand && currentEquippable.equipmentSlot == EquipmentSlot.TwoHanded))
+                    {
+                        // Valid swap - swap the items
+                        var tempItem = equipmentSlot.CurrentEquippedItem;
+                        equipmentSlot.EquipItem(currentEquippable); // This will unequip the old item
+                        inventoryControllerImpl.SetItemAtSlot(slotIndex, tempItem, 1);
+                        inventoryUI.UpdateUI();
+                    }
+                    else
+                    {
+                        Debug.LogWarning($"Cannot equip {currentEquippable.itemName} to {equipmentSlot.SlotType} slot");
+                    }
+                }
+                else
+                {
+                    Debug.LogWarning("Cannot swap equipped item with non-equippable item");
+                }
             }
         }
         
@@ -215,16 +260,34 @@ namespace GameFramework.UI
         {
             if (splitAmount > 0 && splitAmount < stackCount)
             {
+                var inventoryController = inventoryUI.GetComponent<IInventoryController>() as InventoryController;
+                if (inventoryController == null)
+                    inventoryController = FindObjectOfType<InventoryController>();
+                    
+                if (inventoryController == null)
+                {
+                    Debug.LogWarning("InventoryController not found - cannot handle stack split");
+                    return;
+                }
+                
                 // Find empty slot for split items
-                int remainingAmount = stackCount - splitAmount;
-                
-                // Update current slot with remaining items
-                SetItem(currentItem, remainingAmount);
-                
-                // Find empty slot and place split items there
-                // This would need to be implemented by the inventory system
-                inventoryUI.PlaceSplitStack(currentItem, splitAmount);
-                inventoryUI.UpdateUI();
+                int emptySlot = inventoryController.GetFirstEmptySlot();
+                if (emptySlot >= 0)
+                {
+                    int remainingAmount = stackCount - splitAmount;
+                    
+                    // Update current slot with remaining items
+                    inventoryController.SetItemAtSlot(slotIndex, currentItem, remainingAmount);
+                    
+                    // Place split items in empty slot
+                    inventoryController.SetItemAtSlot(emptySlot, currentItem, splitAmount);
+                    
+                    inventoryUI.UpdateUI();
+                }
+                else
+                {
+                    Debug.LogWarning("No empty slot available for stack split");
+                }
             }
         }
     }

@@ -1,0 +1,110 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 6776587dc0714e542a2efa9c6b1ae323, type: 3}
+  m_Name: CameraEffectSettings
+  m_EditorClassIdentifier: 
+  userSettings:
+    masterIntensity: 1
+    enableHeadBob: 1
+    headBobIntensity: 1
+    headBobFrequency: 1
+    enableCameraRoll: 1
+    cameraRollIntensity: 1
+    enableFOVEffects: 1
+    fovEffectIntensity: 1
+    enableCameraShake: 1
+    shakeIntensity: 1
+    enableWalkingEffects: 1
+    enableSprintingEffects: 1
+    enableCrouchingEffects: 1
+    enableSlidingEffects: 1
+    enableAirborneEffects: 1
+  disabledPreset:
+    masterIntensity: 0
+    enableHeadBob: 0
+    headBobIntensity: 1
+    headBobFrequency: 1
+    enableCameraRoll: 0
+    cameraRollIntensity: 1
+    enableFOVEffects: 0
+    fovEffectIntensity: 1
+    enableCameraShake: 0
+    shakeIntensity: 1
+    enableWalkingEffects: 1
+    enableSprintingEffects: 1
+    enableCrouchingEffects: 1
+    enableSlidingEffects: 1
+    enableAirborneEffects: 1
+  minimalPreset:
+    masterIntensity: 0.3
+    enableHeadBob: 1
+    headBobIntensity: 0.5
+    headBobFrequency: 0.8
+    enableCameraRoll: 0
+    cameraRollIntensity: 1
+    enableFOVEffects: 0
+    fovEffectIntensity: 1
+    enableCameraShake: 1
+    shakeIntensity: 0.5
+    enableWalkingEffects: 1
+    enableSprintingEffects: 1
+    enableCrouchingEffects: 1
+    enableSlidingEffects: 1
+    enableAirborneEffects: 1
+  standardPreset:
+    masterIntensity: 1
+    enableHeadBob: 1
+    headBobIntensity: 1
+    headBobFrequency: 1
+    enableCameraRoll: 1
+    cameraRollIntensity: 1
+    enableFOVEffects: 1
+    fovEffectIntensity: 1
+    enableCameraShake: 1
+    shakeIntensity: 1
+    enableWalkingEffects: 1
+    enableSprintingEffects: 1
+    enableCrouchingEffects: 1
+    enableSlidingEffects: 1
+    enableAirborneEffects: 1
+  cinematicPreset:
+    masterIntensity: 1.3
+    enableHeadBob: 1
+    headBobIntensity: 1.2
+    headBobFrequency: 1.1
+    enableCameraRoll: 1
+    cameraRollIntensity: 1.5
+    enableFOVEffects: 1
+    fovEffectIntensity: 1.3
+    enableCameraShake: 1
+    shakeIntensity: 1.2
+    enableWalkingEffects: 1
+    enableSprintingEffects: 1
+    enableCrouchingEffects: 1
+    enableSlidingEffects: 1
+    enableAirborneEffects: 1
+  extremePreset:
+    masterIntensity: 2
+    enableHeadBob: 1
+    headBobIntensity: 2
+    headBobFrequency: 1.5
+    enableCameraRoll: 1
+    cameraRollIntensity: 2
+    enableFOVEffects: 1
+    fovEffectIntensity: 2
+    enableCameraShake: 1
+    shakeIntensity: 2
+    enableWalkingEffects: 1
+    enableSprintingEffects: 1
+    enableCrouchingEffects: 1
+    enableSlidingEffects: 1
+    enableAirborneEffects: 1

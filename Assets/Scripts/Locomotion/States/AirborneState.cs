@@ -13,6 +13,9 @@ namespace GameFramework.Locomotion.States
             // Transition to grounded when touching ground and falling/stationary
             if (controller.IsGrounded && controller.Velocity.y <= 0f)
             {
+                // Notify camera about landing impact
+                NotifyCameraLanding(controller.Velocity.y);
+                
                 controller.ChangeToGroundedState();
             }
         }

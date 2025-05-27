@@ -3,10 +3,13 @@ using UnityEngine.UI;
 using UnityEngine.EventSystems;
 using TMPro;
 using GameFramework.Items;
+using GameFramework.Core.Interfaces;
+using static GameFramework.Items.EquippableItemDefinition;
 
 namespace GameFramework.UI
 {
-    public class HotbarSlot : MonoBehaviour, IPointerEnterHandler, IPointerExitHandler, IPointerClickHandler
+    public class HotbarSlot : MonoBehaviour, IPointerEnterHandler, IPointerExitHandler, IPointerClickHandler,
+                               IDropHandler, IBeginDragHandler, IDragHandler, IEndDragHandler
     {
         [Header("UI Components")]
         [SerializeField] private Image itemIcon;
@@ -20,19 +23,25 @@ namespace GameFramework.UI
         [SerializeField] private Color selectedColor = Color.green;
         
         private InventoryUI inventoryUI;
-        private ItemDefinition currentItem;
+        private HotbarController hotbarController;
+        private EquippableItemDefinition currentItem;
         private int slotIndex;
         private bool isSelected;
+        private bool isDragging;
         
-        public void Initialize(InventoryUI ui, int index)
+        public void Initialize(InventoryUI ui, HotbarController controller, int index)
         {
             inventoryUI = ui;
+            hotbarController = controller;
             slotIndex = index;
             
             if (itemIcon == null) itemIcon = transform.Find("ItemIcon")?.GetComponent<Image>();
+            if (itemIcon == null) itemIcon = GetComponentInChildren<Image>();
             if (background == null) background = GetComponent<Image>();
             if (keyText == null) keyText = GetComponentInChildren<TextMeshProUGUI>();
             if (selectionBorder == null) selectionBorder = transform.Find("SelectionBorder")?.GetComponent<Image>();
+            
+            Debug.Log($"[HotbarSlot {index}] Initialize - itemIcon: {itemIcon != null}, background: {background != null}, keyText: {keyText != null}");
             
             if (keyText != null)
             {
@@ -47,7 +56,7 @@ namespace GameFramework.UI
             SetItem(null);
         }
         
-        public void SetItem(ItemDefinition item)
+        public void SetItem(EquippableItemDefinition item)
         {
             currentItem = item;
             
@@ -57,6 +66,12 @@ namespace GameFramework.UI
                 {
                     itemIcon.sprite = item.icon;
                     itemIcon.color = Color.white;
+                    itemIcon.gameObject.SetActive(true);
+                    Debug.Log($"[HotbarSlot {slotIndex}] Set item: {item.itemName} with icon: {(item.icon?.name ?? "null")}");
+                }
+                else
+                {
+                    Debug.LogWarning($"[HotbarSlot {slotIndex}] itemIcon is null when trying to set {item.itemName}");
                 }
             }
             else
@@ -65,6 +80,12 @@ namespace GameFramework.UI
                 {
                     itemIcon.sprite = null;
                     itemIcon.color = Color.clear;
+                    itemIcon.gameObject.SetActive(false);
+                    Debug.Log($"[HotbarSlot {slotIndex}] Cleared item - sprite and color reset");
+                }
+                else
+                {
+                    Debug.LogWarning($"[HotbarSlot {slotIndex}] itemIcon is null when trying to clear item");
                 }
             }
         }
@@ -110,7 +131,137 @@ namespace GameFramework.UI
         
         public void OnPointerClick(PointerEventData eventData)
         {
-            inventoryUI.SelectHotbarSlot(slotIndex);
+            if (eventData.button == PointerEventData.InputButton.Left)
+            {
+                hotbarController.SelectHotbarSlot(slotIndex);
+            }
+            else if (eventData.button == PointerEventData.InputButton.Right && currentItem != null)
+            {
+                // Right-click to remove from hotbar
+                RemoveFromHotbar();
+            }
         }
+        
+        public void OnDrop(PointerEventData eventData)
+        {
+            var draggedSlot = eventData.pointerDrag?.GetComponent<InventorySlot>();
+            var draggedHotbarSlot = eventData.pointerDrag?.GetComponent<HotbarSlot>();
+            var draggedEquipmentSlot = eventData.pointerDrag?.GetComponent<EquipmentSlotUI>();
+            
+            if (draggedSlot != null)
+            {
+                HandleInventorySlotDrop(draggedSlot);
+            }
+            else if (draggedHotbarSlot != null && draggedHotbarSlot != this)
+            {
+                HandleHotbarSlotDrop(draggedHotbarSlot);
+            }
+            else if (draggedEquipmentSlot != null)
+            {
+                HandleEquipmentSlotDrop(draggedEquipmentSlot);
+            }
+            
+            // Reset visual feedback
+            if (background != null && !isSelected)
+            {
+                background.color = normalColor;
+            }
+        }
+        
+        public void OnBeginDrag(PointerEventData eventData)
+        {
+            if (currentItem == null) return;
+            
+            isDragging = true;
+            inventoryUI.HideTooltip();
+            
+            // Use drag visual manager
+            DragVisualManager.Instance.StartDrag(currentItem, eventData.position);
+        }
+        
+        public void OnDrag(PointerEventData eventData)
+        {
+            if (isDragging)
+            {
+                DragVisualManager.Instance.UpdateDragPosition(eventData.position);
+            }
+        }
+        
+        public void OnEndDrag(PointerEventData eventData)
+        {
+            isDragging = false;
+            DragVisualManager.Instance.StopDrag();
+        }
+        
+        private void HandleInventorySlotDrop(InventorySlot inventorySlot)
+        {
+            if (inventorySlot.CurrentItem is EquippableItemDefinition equippable)
+            {
+                // Check if item can be equipped to main hand
+                if (equippable.equipmentSlot == EquipmentSlot.MainHand || 
+                    equippable.equipmentSlot == EquipmentSlot.TwoHanded)
+                {
+                    // Reference the item in inventory, don't move it
+                    bool success = hotbarController.SetHotbarItem(slotIndex, equippable);
+                    if (success)
+                    {
+                        Debug.Log($"[HotbarSlot {slotIndex}] Successfully added {equippable.itemName} to hotbar");
+                    }
+                    else
+                    {
+                        Debug.LogWarning($"[HotbarSlot {slotIndex}] Failed to add {equippable.itemName} to hotbar");
+                    }
+                }
+                else
+                {
+                    Debug.LogWarning($"Cannot add {equippable.itemName} to hotbar - not a main hand item");
+                }
+            }
+        }
+        
+        private void HandleHotbarSlotDrop(HotbarSlot otherSlot)
+        {
+            // Swap hotbar items
+            hotbarController.SwapHotbarItems(otherSlot.slotIndex, slotIndex);
+        }
+        
+        private void HandleEquipmentSlotDrop(EquipmentSlotUI equipmentSlot)
+        {
+            // Only allow main hand items
+            if (equipmentSlot.SlotType == EquipmentSlot.MainHand && equipmentSlot.CurrentEquippedItem != null)
+            {
+                var equippedItem = equipmentSlot.CurrentEquippedItem;
+                
+                // Unequip the item first so it goes back to inventory
+                var inventoryController = inventoryUI.GetComponent<GameFramework.Core.Interfaces.IInventoryController>();
+                if (inventoryController == null)
+                    inventoryController = FindObjectOfType<InventoryController>();
+                    
+                if (inventoryController != null && inventoryController.CanAddItem(equippedItem, 1))
+                {
+                    if (inventoryController.AddItem(equippedItem, 1))
+                    {
+                        equipmentSlot.UnequipItem();
+                        hotbarController.SetHotbarItem(slotIndex, equippedItem);
+                        inventoryUI.UpdateUI();
+                    }
+                }
+                else
+                {
+                    Debug.LogWarning("Cannot add to hotbar - inventory full!");
+                }
+            }
+        }
+        
+        private void RemoveFromHotbar()
+        {
+            if (currentItem == null) return;
+            
+            // Just remove the reference, item stays in inventory
+            hotbarController.RemoveHotbarItem(slotIndex);
+        }
+        
+        public EquippableItemDefinition CurrentItem => currentItem;
+        public int SlotIndex => slotIndex;
     }
 }

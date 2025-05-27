@@ -2,6 +2,7 @@ using UnityEngine;
 using UnityEngine.InputSystem;
 using GameFramework.Core.Interfaces;
 using GameFramework.UI;
+using GameFramework.Items.Abilities;
 
 namespace GameFramework.Input
 {
@@ -145,6 +146,9 @@ namespace GameFramework.Input
         {
             jumpPressed = true;
             jumpHeld = true;
+            
+            // Notify any double jump abilities
+            NotifyDoubleJumpAbilities(true);
         }
 
         private void OnJumpCanceled(InputAction.CallbackContext context)
@@ -246,6 +250,19 @@ namespace GameFramework.Input
         private void OnScrollWheelCanceled(InputAction.CallbackContext context)
         {
             scrollInput = Vector2.zero;
+        }
+        
+        private void NotifyDoubleJumpAbilities(bool jumpPressed)
+        {
+            // Find all double jump abilities and notify them of jump input
+            DoubleJumpAbility[] doubleJumpAbilities = GetComponents<DoubleJumpAbility>();
+            foreach (var ability in doubleJumpAbilities)
+            {
+                if (ability.IsActive)
+                {
+                    ability.HandleJumpInput(jumpPressed);
+                }
+            }
         }
     }
 }

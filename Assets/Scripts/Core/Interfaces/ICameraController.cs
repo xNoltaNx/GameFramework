@@ -12,5 +12,10 @@ namespace GameFramework.Core.Interfaces
         void SetSensitivity(float sensitivity);
         void SetFieldOfView(float fov);
         void SetTarget(Transform target);
+        
+        // Camera effects support
+        void NotifyLocomotionStateChanged(string stateName, bool isMoving, bool isSprinting, float movementSpeed);
+        void NotifyLanding(float landingVelocity);
+        void NotifyMovementInput(Vector2 movementInput);
     }
 }
