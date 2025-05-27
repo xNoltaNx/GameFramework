@@ -185,9 +185,9 @@ namespace GameFramework.UI
                     alreadyEquipped = true;
                 }
                 
-                if (inInventory)
+                if (inInventory && !alreadyEquipped)
                 {
-                    // Item is available in inventory - always try to equip to ensure correct item is equipped
+                    // Item is available in inventory and not already equipped - equip it
                     equipmentController.EquipItem(item, "MainHand");
                     lastEquippedItem = item;
                     
@@ -196,17 +196,17 @@ namespace GameFramework.UI
                 }
                 else if (alreadyEquipped)
                 {
-                    // Item is equipped but not in inventory - this is fine for auto-equipped items
+                    // Item is already equipped - no need to re-equip
                     lastEquippedItem = item;
                     
                     if (debugMode)
                         Debug.Log($"Item {item.itemName} already equipped in MainHand");
                 }
-                else
+                else if (!inInventory)
                 {
-                    // Item no longer available anywhere - only then remove from hotbar
+                    // Item no longer available in inventory - remove from hotbar
                     if (debugMode)
-                        Debug.LogWarning($"Item {item.itemName} no longer available, removing from hotbar");
+                        Debug.LogWarning($"Item {item.itemName} no longer available in inventory, removing from hotbar");
                     hotbarItems[index] = null;
                     OnHotbarChanged?.Invoke(index);
                 }

@@ -349,20 +349,9 @@ namespace GameFramework.Items
             
             if (equipped)
             {
-                // Remove one instance of the equipped item from inventory since it's now equipped
-                if (RemoveItem(equippableItem, 1))
+                if (debugMode)
                 {
-                    if (debugMode)
-                    {
-                        Debug.Log($"Auto-equipped {item.GetDisplayName()} to {slotName} slot and removed from inventory");
-                    }
-                }
-                else
-                {
-                    if (debugMode)
-                    {
-                        Debug.LogWarning($"Failed to remove {item.GetDisplayName()} from inventory after auto-equipping");
-                    }
+                    Debug.Log($"Auto-equipped {item.GetDisplayName()} to {slotName} slot (item remains in inventory)");
                 }
                 
                 // If this is a main hand item and we have a hotbar controller, 

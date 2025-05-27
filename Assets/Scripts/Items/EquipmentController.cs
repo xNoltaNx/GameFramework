@@ -192,18 +192,23 @@ namespace GameFramework.Items
             if (item.equipmentPrefab != null)
             {
                 Transform attachPoint = attachmentPoints[slotName];
+                
+                // Capture the original prefab scale before instantiation
+                Vector3 originalPrefabScale = item.equipmentPrefab.transform.localScale;
+                
                 equippedObject = Instantiate(item.equipmentPrefab, attachPoint);
                 
                 // Apply attachment offset and rotation
                 equippedObject.transform.localPosition = item.attachmentOffset;
                 equippedObject.transform.localRotation = Quaternion.Euler(item.attachmentRotation);
                 
-                // Set world scale to prevent parent scaling from affecting equipment geometry
+                // Calculate final scale: original prefab scale * attachment scale multiplier, corrected for parent scaling
                 Vector3 parentScale = attachPoint.lossyScale;
+                Vector3 desiredScale = Vector3.Scale(originalPrefabScale, item.attachmentScale);
                 Vector3 correctedScale = new Vector3(
-                    item.attachmentScale.x / parentScale.x,
-                    item.attachmentScale.y / parentScale.y,
-                    item.attachmentScale.z / parentScale.z
+                    desiredScale.x / parentScale.x,
+                    desiredScale.y / parentScale.y,
+                    desiredScale.z / parentScale.z
                 );
                 equippedObject.transform.localScale = correctedScale;
             }
