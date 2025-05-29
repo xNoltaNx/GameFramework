@@ -22,6 +22,12 @@ namespace GameFramework.Locomotion.States
 
         public override void HandleMovement(Vector2 movementInput, bool sprintHeld, bool crouchHeld)
         {
+            // Handle crouch input while airborne - set for landing state
+            controller.SetCrouching(crouchHeld);
+            
+            // Notify camera about movement input changes
+            NotifyCameraMovementInput(movementInput);
+            
             if (controller.CanMantle(movementInput, out Vector3 mantleTarget))
             {
                 controller.ChangeToMantleState(mantleTarget);

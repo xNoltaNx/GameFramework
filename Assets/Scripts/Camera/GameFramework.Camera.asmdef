@@ -1,0 +1,17 @@
+{
+    "name": "GameFramework.Camera",
+    "rootNamespace": "GameFramework.Camera",
+    "references": [
+        "Unity.Cinemachine",
+        "GameFramework.Core"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

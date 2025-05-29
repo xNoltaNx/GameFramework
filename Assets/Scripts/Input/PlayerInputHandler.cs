@@ -1,8 +1,7 @@
 using UnityEngine;
 using UnityEngine.InputSystem;
 using GameFramework.Core.Interfaces;
-using GameFramework.UI;
-using GameFramework.Items.Abilities;
+using System;
 
 namespace GameFramework.Input
 {
@@ -11,10 +10,15 @@ namespace GameFramework.Input
         [Header("Input Settings")]
         [SerializeField] private float mouseSensitivity = 2f;
         
-        [Header("UI References")]
-        [SerializeField] private InventoryUI inventoryUI;
+        // Events for UI interaction
+        public event Action OnInventoryToggle;
+        public event Action<bool> OnEquipmentCycle; // bool = scrollUp
+        public event Action<bool> OnJumpAbilityInput; // bool = jumpPressed
+        public event Action<int> OnHotbarSlotSelected; // int = slot index
         
-        private InputSystem_Actions inputActions;
+        [SerializeField] private InputActionAsset inputActionAsset;
+        private InputActionMap playerActionMap;
+        private InputActionMap uiActionMap;
         private Vector2 movementInput;
         private Vector2 lookInput;
         private bool jumpPressed;
@@ -44,36 +48,49 @@ namespace GameFramework.Input
 
         private void InitializeInputActions()
         {
-            inputActions = new InputSystem_Actions();
+            if (inputActionAsset == null)
+            {
+                Debug.LogError("InputActionAsset is not assigned in PlayerInputHandler!");
+                return;
+            }
+
+            playerActionMap = inputActionAsset.FindActionMap("Player");
+            uiActionMap = inputActionAsset.FindActionMap("UI");
             
-            inputActions.Player.Move.performed += OnMovePerformed;
-            inputActions.Player.Move.canceled += OnMoveCanceled;
+            if (playerActionMap == null || uiActionMap == null)
+            {
+                Debug.LogError("Required action maps not found in InputActionAsset!");
+                return;
+            }
             
-            inputActions.Player.Look.performed += OnLookPerformed;
-            inputActions.Player.Look.canceled += OnLookCanceled;
+            playerActionMap.FindAction("Move").performed += OnMovePerformed;
+            playerActionMap.FindAction("Move").canceled += OnMoveCanceled;
             
-            inputActions.Player.Jump.performed += OnJumpPerformed;
-            inputActions.Player.Jump.canceled += OnJumpCanceled;
+            playerActionMap.FindAction("Look").performed += OnLookPerformed;
+            playerActionMap.FindAction("Look").canceled += OnLookCanceled;
             
-            inputActions.Player.Sprint.performed += OnSprintPerformed;
-            inputActions.Player.Sprint.canceled += OnSprintCanceled;
+            playerActionMap.FindAction("Jump").performed += OnJumpPerformed;
+            playerActionMap.FindAction("Jump").canceled += OnJumpCanceled;
             
-            inputActions.Player.Crouch.performed += OnCrouchPerformed;
-            inputActions.Player.Crouch.canceled += OnCrouchCanceled;
+            playerActionMap.FindAction("Sprint").performed += OnSprintPerformed;
+            playerActionMap.FindAction("Sprint").canceled += OnSprintCanceled;
             
-            inputActions.Player.Attack.performed += OnAttackPerformed;
-            inputActions.Player.Interact.performed += OnInteractPerformed;
+            playerActionMap.FindAction("Crouch").performed += OnCrouchPerformed;
+            playerActionMap.FindAction("Crouch").canceled += OnCrouchCanceled;
             
-            inputActions.Player.ToggleInventory.performed += OnToggleInventoryPerformed;
-            inputActions.Player.Hotbar1.performed += OnHotbar1Performed;
-            inputActions.Player.Hotbar2.performed += OnHotbar2Performed;
-            inputActions.Player.Hotbar3.performed += OnHotbar3Performed;
-            inputActions.Player.Hotbar4.performed += OnHotbar4Performed;
-            inputActions.Player.Hotbar5.performed += OnHotbar5Performed;
+            playerActionMap.FindAction("Attack").performed += OnAttackPerformed;
+            playerActionMap.FindAction("Interact").performed += OnInteractPerformed;
+            
+            playerActionMap.FindAction("ToggleInventory").performed += OnToggleInventoryPerformed;
+            playerActionMap.FindAction("Hotbar1").performed += OnHotbar1Performed;
+            playerActionMap.FindAction("Hotbar2").performed += OnHotbar2Performed;
+            playerActionMap.FindAction("Hotbar3").performed += OnHotbar3Performed;
+            playerActionMap.FindAction("Hotbar4").performed += OnHotbar4Performed;
+            playerActionMap.FindAction("Hotbar5").performed += OnHotbar5Performed;
             
             // Use UI scroll wheel input for equipment cycling
-            inputActions.UI.ScrollWheel.performed += OnScrollWheelPerformed;
-            inputActions.UI.ScrollWheel.canceled += OnScrollWheelCanceled;
+            uiActionMap.FindAction("ScrollWheel").performed += OnScrollWheelPerformed;
+            uiActionMap.FindAction("ScrollWheel").canceled += OnScrollWheelCanceled;
         }
 
         private void OnEnable()
@@ -88,7 +105,7 @@ namespace GameFramework.Input
 
         private void OnDestroy()
         {
-            inputActions?.Dispose();
+            // No need to dispose InputActionAsset as it's a ScriptableObject
         }
 
         private void LateUpdate()
@@ -107,14 +124,14 @@ namespace GameFramework.Input
 
         public void EnableInput()
         {
-            inputActions?.Player.Enable();
-            inputActions?.UI.Enable();
+            playerActionMap?.Enable();
+            uiActionMap?.Enable();
         }
 
         public void DisableInput()
         {
-            inputActions?.Player.Disable();
-            inputActions?.UI.Disable();
+            playerActionMap?.Disable();
+            uiActionMap?.Disable();
         }
 
         public void SetMouseSensitivity(float sensitivity)
@@ -147,8 +164,8 @@ namespace GameFramework.Input
             jumpPressed = true;
             jumpHeld = true;
             
-            // Notify any double jump abilities
-            NotifyDoubleJumpAbilities(true);
+            // Notify jump abilities via event
+            OnJumpAbilityInput?.Invoke(true);
         }
 
         private void OnJumpCanceled(InputAction.CallbackContext context)
@@ -190,60 +207,42 @@ namespace GameFramework.Input
         private void OnToggleInventoryPerformed(InputAction.CallbackContext context)
         {
             inventoryTogglePressed = true;
-            if (inventoryUI != null)
-            {
-                inventoryUI.ToggleInventory();
-            }
+            OnInventoryToggle?.Invoke();
         }
         
         private void OnHotbar1Performed(InputAction.CallbackContext context)
         {
-            if (inventoryUI != null)
-            {
-                inventoryUI.SelectHotbarSlot(0);
-            }
+            OnHotbarSlotSelected?.Invoke(0);
         }
         
         private void OnHotbar2Performed(InputAction.CallbackContext context)
         {
-            if (inventoryUI != null)
-            {
-                inventoryUI.SelectHotbarSlot(1);
-            }
+            OnHotbarSlotSelected?.Invoke(1);
         }
         
         private void OnHotbar3Performed(InputAction.CallbackContext context)
         {
-            if (inventoryUI != null)
-            {
-                inventoryUI.SelectHotbarSlot(2);
-            }
+            OnHotbarSlotSelected?.Invoke(2);
         }
         
         private void OnHotbar4Performed(InputAction.CallbackContext context)
         {
-            if (inventoryUI != null)
-            {
-                inventoryUI.SelectHotbarSlot(3);
-            }
+            OnHotbarSlotSelected?.Invoke(3);
         }
         
         private void OnHotbar5Performed(InputAction.CallbackContext context)
         {
-            if (inventoryUI != null)
-            {
-                inventoryUI.SelectHotbarSlot(4);
-            }
+            OnHotbarSlotSelected?.Invoke(4);
         }
         
         private void OnScrollWheelPerformed(InputAction.CallbackContext context)
         {
             scrollInput = context.ReadValue<Vector2>();
             
-            // Handle equipment cycling when inventory UI is available
-            if (inventoryUI != null && scrollInput.y != 0)
+            // Handle equipment cycling via event
+            if (scrollInput.y != 0)
             {
-                inventoryUI.CycleEquippedItems(scrollInput.y > 0);
+                OnEquipmentCycle?.Invoke(scrollInput.y > 0);
             }
         }
         
@@ -252,17 +251,5 @@ namespace GameFramework.Input
             scrollInput = Vector2.zero;
         }
         
-        private void NotifyDoubleJumpAbilities(bool jumpPressed)
-        {
-            // Find all double jump abilities and notify them of jump input
-            DoubleJumpAbility[] doubleJumpAbilities = GetComponents<DoubleJumpAbility>();
-            foreach (var ability in doubleJumpAbilities)
-            {
-                if (ability.IsActive)
-                {
-                    ability.HandleJumpInput(jumpPressed);
-                }
-            }
-        }
     }
 }

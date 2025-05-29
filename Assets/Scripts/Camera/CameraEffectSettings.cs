@@ -1,198 +1,52 @@
+// DEPRECATED: Legacy camera effect settings - replaced with Cinemachine profiles
+// This file contained the previous camera effects configuration system
+//
+// Previous Features:
+// - User settings with master intensity controls
+// - State-specific effect enable/disable toggles  
+// - Preset system (Disabled, Minimal, Standard, Cinematic, Extreme)
+// - Legacy multiplier-based and comprehensive absolute value configurations
+//
+// TODO: Replace with Cinemachine configuration:
+// - Use Cinemachine Noise Settings instead of user settings
+// - Create Cinemachine Impulse Settings for camera shake
+// - Set up virtual camera profiles for different movement states
+// - Use Cinemachine Brain for smooth transitions between cameras
+
 using UnityEngine;
 
 namespace GameFramework.Camera
 {
+    [System.Obsolete("CameraEffectSettings is deprecated. Use Cinemachine Noise Settings instead.")]
+    [CreateAssetMenu(fileName = "LegacyCameraEffectSettings", menuName = "GameFramework/Legacy/Camera Effect Settings (Deprecated)")]
+    public class CameraEffectSettings : ScriptableObject
+    {
+        [Header("DEPRECATED - Use Cinemachine Instead")]
+        [TextArea(3, 5)]
+        public string migrationNote = "This asset is deprecated. Please use Cinemachine virtual cameras with noise profiles for camera effects instead.";
+        
+        private void OnEnable()
+        {
+            Debug.LogWarning("[CameraEffectSettings] This ScriptableObject is deprecated. " +
+                           "Please use Cinemachine virtual cameras with noise profiles instead.");
+        }
+    }
+
+    [System.Obsolete("Replace with Cinemachine Noise Settings")]
     [System.Serializable]
     public class CameraEffectUserSettings
     {
-        [Header("Global Settings")]
-        [Range(0f, 2f)]
-        public float masterIntensity = 1f;
-        
-        [Header("Head Bob Settings")]
-        public bool enableHeadBob = true;
-        [Range(0f, 2f)]
-        public float headBobIntensity = 1f;
-        [Range(0.5f, 3f)]
-        public float headBobFrequency = 1f;
-        
-        [Header("Camera Roll Settings")]
-        public bool enableCameraRoll = true;
-        [Range(0f, 2f)]
-        public float cameraRollIntensity = 1f;
-        
-        [Header("Field of View Effects")]
-        public bool enableFOVEffects = true;
-        [Range(0f, 2f)]
-        public float fovEffectIntensity = 1f;
-        
-        [Header("Camera Shake Settings")]
-        public bool enableCameraShake = true;
-        [Range(0f, 2f)]
-        public float shakeIntensity = 1f;
-        
-        [Header("State-Specific Overrides")]
-        public bool enableWalkingEffects = true;
-        public bool enableSprintingEffects = true;
-        public bool enableCrouchingEffects = true;
-        public bool enableSlidingEffects = true;
-        public bool enableAirborneEffects = true;
+        // Previous implementation: global intensity multipliers and effect toggles
+        // Cinemachine equivalent: Use Noise Settings on virtual cameras
     }
 
-    [CreateAssetMenu(fileName = "CameraEffectSettings", menuName = "GameFramework/Camera/Effect Settings")]
-    public class CameraEffectSettings : ScriptableObject
-    {
-        [SerializeField] private CameraEffectUserSettings userSettings = new CameraEffectUserSettings();
-        
-        public CameraEffectUserSettings UserSettings => userSettings;
-        
-        [Header("Preset Configurations")]
-        [SerializeField] private CameraEffectUserSettings disabledPreset;
-        [SerializeField] private CameraEffectUserSettings minimalPreset;
-        [SerializeField] private CameraEffectUserSettings standardPreset;
-        [SerializeField] private CameraEffectUserSettings cinematicPreset;
-        [SerializeField] private CameraEffectUserSettings extremePreset;
-
-        private void OnEnable()
-        {
-            InitializePresets();
-        }
-
-        private void InitializePresets()
-        {
-            // Disabled preset - all effects off
-            disabledPreset = new CameraEffectUserSettings
-            {
-                masterIntensity = 0f,
-                enableHeadBob = false,
-                enableCameraRoll = false,
-                enableFOVEffects = false,
-                enableCameraShake = false
-            };
-
-            // Minimal preset - very subtle effects
-            minimalPreset = new CameraEffectUserSettings
-            {
-                masterIntensity = 0.3f,
-                enableHeadBob = true,
-                headBobIntensity = 0.5f,
-                headBobFrequency = 0.8f,
-                enableCameraRoll = false,
-                enableFOVEffects = false,
-                enableCameraShake = true,
-                shakeIntensity = 0.5f
-            };
-
-            // Standard preset - balanced effects
-            standardPreset = new CameraEffectUserSettings
-            {
-                masterIntensity = 1f,
-                enableHeadBob = true,
-                headBobIntensity = 1f,
-                headBobFrequency = 1f,
-                enableCameraRoll = true,
-                cameraRollIntensity = 1f,
-                enableFOVEffects = true,
-                fovEffectIntensity = 1f,
-                enableCameraShake = true,
-                shakeIntensity = 1f
-            };
-
-            // Cinematic preset - enhanced dramatic effects
-            cinematicPreset = new CameraEffectUserSettings
-            {
-                masterIntensity = 1.3f,
-                enableHeadBob = true,
-                headBobIntensity = 1.2f,
-                headBobFrequency = 1.1f,
-                enableCameraRoll = true,
-                cameraRollIntensity = 1.5f,
-                enableFOVEffects = true,
-                fovEffectIntensity = 1.3f,
-                enableCameraShake = true,
-                shakeIntensity = 1.2f
-            };
-
-            // Extreme preset - maximum effects
-            extremePreset = new CameraEffectUserSettings
-            {
-                masterIntensity = 2f,
-                enableHeadBob = true,
-                headBobIntensity = 2f,
-                headBobFrequency = 1.5f,
-                enableCameraRoll = true,
-                cameraRollIntensity = 2f,
-                enableFOVEffects = true,
-                fovEffectIntensity = 2f,
-                enableCameraShake = true,
-                shakeIntensity = 2f
-            };
-        }
-
-        public void ApplyPreset(CameraEffectPreset preset)
-        {
-            switch (preset)
-            {
-                case CameraEffectPreset.Disabled:
-                    userSettings = CloneSettings(disabledPreset);
-                    break;
-                case CameraEffectPreset.Minimal:
-                    userSettings = CloneSettings(minimalPreset);
-                    break;
-                case CameraEffectPreset.Standard:
-                    userSettings = CloneSettings(standardPreset);
-                    break;
-                case CameraEffectPreset.Cinematic:
-                    userSettings = CloneSettings(cinematicPreset);
-                    break;
-                case CameraEffectPreset.Extreme:
-                    userSettings = CloneSettings(extremePreset);
-                    break;
-            }
-        }
-
-        private CameraEffectUserSettings CloneSettings(CameraEffectUserSettings source)
-        {
-            return new CameraEffectUserSettings
-            {
-                masterIntensity = source.masterIntensity,
-                enableHeadBob = source.enableHeadBob,
-                headBobIntensity = source.headBobIntensity,
-                headBobFrequency = source.headBobFrequency,
-                enableCameraRoll = source.enableCameraRoll,
-                cameraRollIntensity = source.cameraRollIntensity,
-                enableFOVEffects = source.enableFOVEffects,
-                fovEffectIntensity = source.fovEffectIntensity,
-                enableCameraShake = source.enableCameraShake,
-                shakeIntensity = source.shakeIntensity,
-                enableWalkingEffects = source.enableWalkingEffects,
-                enableSprintingEffects = source.enableSprintingEffects,
-                enableCrouchingEffects = source.enableCrouchingEffects,
-                enableSlidingEffects = source.enableSlidingEffects,
-                enableAirborneEffects = source.enableAirborneEffects
-            };
-        }
-
-        public void ResetToDefault()
-        {
-            ApplyPreset(CameraEffectPreset.Standard);
-        }
-
-        public void SaveSettings()
-        {
-            // In a real implementation, you might save to PlayerPrefs or a save file
-#if UNITY_EDITOR
-            UnityEditor.EditorUtility.SetDirty(this);
-#endif
-        }
-    }
-
+    [System.Obsolete("Replace with Cinemachine virtual camera priorities")]
     public enum CameraEffectPreset
     {
-        Disabled,
-        Minimal,
-        Standard,
-        Cinematic,
-        Extreme
+        Disabled,   // Cinemachine equivalent: Low noise amplitude
+        Minimal,    // Cinemachine equivalent: Subtle noise profiles
+        Standard,   // Cinemachine equivalent: Balanced noise settings
+        Cinematic,  // Cinemachine equivalent: Enhanced dramatic noise
+        Extreme     // Cinemachine equivalent: High amplitude noise
     }
 }

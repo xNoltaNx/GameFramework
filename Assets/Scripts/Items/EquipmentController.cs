@@ -1,7 +1,7 @@
 using System.Collections.Generic;
 using UnityEngine;
-using GameFramework.Core.Interfaces;
 using GameFramework.Items.Abilities;
+using GameFramework.Core.Interfaces;
 
 namespace GameFramework.Items
 {
@@ -107,8 +107,9 @@ namespace GameFramework.Items
             }
         }
         
-        public bool CanEquipItem(EquippableItemDefinition item, string slotName = null)
+        public bool CanEquipItem(object itemObj, string slotName = null)
         {
+            var item = itemObj as EquippableItemDefinition;
             if (item == null) return false;
             
             // If no slot specified, use the item's primary slot
@@ -169,8 +170,11 @@ namespace GameFramework.Items
             return true;
         }
         
-        public bool EquipItem(EquippableItemDefinition item, string slotName = null)
+        public bool EquipItem(object itemObj, string slotName = null)
         {
+            var item = itemObj as EquippableItemDefinition;
+            if (item == null) return false;
+            
             if (!CanEquipItem(item, slotName)) return false;
             
             // If no slot specified, use the item's primary slot
@@ -261,7 +265,7 @@ namespace GameFramework.Items
             return true;
         }
         
-        public EquippedItem GetEquippedItem(string slotName)
+        public object GetEquippedItem(string slotName)
         {
             equippedItems.TryGetValue(slotName, out EquippedItem item);
             return item;
@@ -285,6 +289,7 @@ namespace GameFramework.Items
             attachmentPoints.TryGetValue(slotName, out Transform point);
             return point;
         }
+        
         
         public void UnequipAll()
         {

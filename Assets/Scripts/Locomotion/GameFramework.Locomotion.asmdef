@@ -1,0 +1,16 @@
+{
+    "name": "GameFramework.Locomotion",
+    "rootNamespace": "GameFramework.Locomotion",
+    "references": [
+        "GameFramework.Core"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

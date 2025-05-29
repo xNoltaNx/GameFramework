@@ -1,5 +1,4 @@
 using UnityEngine;
-using GameFramework.Camera;
 
 namespace GameFramework.Locomotion.States
 {

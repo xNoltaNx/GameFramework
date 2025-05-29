@@ -321,7 +321,7 @@ namespace GameFramework.UI
                 {
                     if (i < items.Count)
                     {
-                        inventorySlots[i].SetItem(items[i].Key, items[i].Value);
+                        inventorySlots[i].SetItem(items[i].Key as ItemDefinition, items[i].Value);
                     }
                     else
                     {
@@ -392,7 +392,8 @@ namespace GameFramework.UI
                     Debug.Log($"[InventoryUI] Checking equipment slot: {slotName}");
                     
                     // Get the currently equipped item for this slot
-                    var equippedItem = equipmentController.GetEquippedItem(slotName);
+                    var equippedItemObj = equipmentController.GetEquippedItem(slotName);
+                    var equippedItem = equippedItemObj as GameFramework.Items.EquippedItem;
                     
                     if (equippedItem != null)
                     {
@@ -524,7 +525,16 @@ namespace GameFramework.UI
             }
             
             // If this component is not active, find an alternative MonoBehaviour
-            var characterController = FindObjectOfType<GameFramework.Character.FirstPersonCharacterController>();
+            var characterControllers = FindObjectsOfType<MonoBehaviour>();
+            MonoBehaviour characterController = null;
+            foreach (var controller in characterControllers)
+            {
+                if (controller is ICharacterController)
+                {
+                    characterController = controller;
+                    break;
+                }
+            }
             if (characterController != null && characterController.gameObject.activeInHierarchy)
             {
                 return characterController.StartCoroutine(routine);

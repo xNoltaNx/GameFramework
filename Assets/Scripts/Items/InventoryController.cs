@@ -32,9 +32,8 @@ namespace GameFramework.Items
         private ItemStack[] inventorySlots;
         private List<ItemStack> items = new List<ItemStack>();
         private IEquipmentController equipmentController;
-        private GameFramework.UI.HotbarController hotbarController;
+        private IHotbarController hotbarController;
         
-        public IReadOnlyList<ItemStack> Items => items;
         public int Capacity => unlimitedCapacity ? int.MaxValue : capacity;
         
         private void Awake()
@@ -59,15 +58,25 @@ namespace GameFramework.Items
             }
             
             // Find hotbar controller
-            hotbarController = GetComponent<GameFramework.UI.HotbarController>();
+            hotbarController = GetComponent<IHotbarController>();
             if (hotbarController == null)
             {
-                hotbarController = FindObjectOfType<GameFramework.UI.HotbarController>();
+                // Find any MonoBehaviour that implements IHotbarController
+                var hotbarControllers = FindObjectsOfType<MonoBehaviour>();
+                foreach (var controller in hotbarControllers)
+                {
+                    if (controller is IHotbarController hotbar)
+                    {
+                        hotbarController = hotbar;
+                        break;
+                    }
+                }
             }
         }
         
-        public bool CanAddItem(ItemDefinition item, int quantity = 1)
+        public bool CanAddItem(object itemObj, int quantity = 1)
         {
+            var item = itemObj as ItemDefinition;
             if (debugMode)
             {
                 Debug.Log($"InventoryController.CanAddItem: {item?.GetDisplayName()} x{quantity}");
@@ -107,8 +116,11 @@ namespace GameFramework.Items
             }
         }
         
-        public bool AddItem(ItemDefinition item, int quantity = 1)
+        public bool AddItem(object itemObj, int quantity = 1)
         {
+            var item = itemObj as ItemDefinition;
+            if (item == null) return false;
+            
             if (!CanAddItem(item, quantity)) return false;
             
             if (debugMode)
@@ -199,8 +211,11 @@ namespace GameFramework.Items
             AddNonStackableItemToSlots(item, quantity);
         }
         
-        public bool RemoveItem(ItemDefinition item, int quantity = 1)
+        public bool RemoveItem(object itemObj, int quantity = 1)
         {
+            var item = itemObj as ItemDefinition;
+            if (item == null) return false;
+            
             if (!HasItem(item, quantity)) return false;
             
             if (debugMode)
@@ -233,13 +248,18 @@ namespace GameFramework.Items
             return true;
         }
         
-        public bool HasItem(ItemDefinition item, int quantity = 1)
+        public bool HasItem(object itemObj, int quantity = 1)
         {
+            var item = itemObj as ItemDefinition;
+            if (item == null) return false;
+            
             return GetItemCount(item) >= quantity;
         }
         
-        public int GetItemCount(ItemDefinition item)
+        public int GetItemCount(object itemObj)
         {
+            var item = itemObj as ItemDefinition;
+            if (item == null) return 0;
             int count = 0;
             foreach (ItemStack stack in items)
             {
@@ -257,6 +277,17 @@ namespace GameFramework.Items
             foreach (ItemStack stack in items)
             {
                 result.Add(new System.Collections.Generic.KeyValuePair<ItemDefinition, int>(stack.item, stack.quantity));
+            }
+            return result;
+        }
+
+        // Interface implementation
+        System.Collections.Generic.List<System.Collections.Generic.KeyValuePair<object, int>> IInventoryController.GetAllItems()
+        {
+            var result = new System.Collections.Generic.List<System.Collections.Generic.KeyValuePair<object, int>>();
+            foreach (ItemStack stack in items)
+            {
+                result.Add(new System.Collections.Generic.KeyValuePair<object, int>(stack.item, stack.quantity));
             }
             return result;
         }
@@ -294,6 +325,7 @@ namespace GameFramework.Items
             }
             items.Clear();
         }
+        
         
         public void SetCapacity(int newCapacity)
         {

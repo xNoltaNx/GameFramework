@@ -6,7 +6,7 @@ using static GameFramework.Items.EquippableItemDefinition;
 
 namespace GameFramework.UI
 {
-    public class HotbarController : MonoBehaviour
+    public class HotbarController : MonoBehaviour, IHotbarController
     {
         [Header("Hotbar Settings")]
         [SerializeField] private int hotbarSize = 5;
@@ -77,7 +77,8 @@ namespace GameFramework.UI
                 // For equipped items, we allow them even if not in inventory
                 if (equipmentController != null)
                 {
-                    var equippedItem = equipmentController.GetEquippedItem("MainHand");
+                    var equippedItemObj = equipmentController.GetEquippedItem("MainHand");
+                    var equippedItem = equippedItemObj as GameFramework.Items.EquippedItem;
                     if (equippedItem == null || equippedItem.item != item)
                     {
                         if (debugMode)
@@ -179,7 +180,8 @@ namespace GameFramework.UI
                 bool inInventory = inventoryController.HasItem(item, 1);
                 bool alreadyEquipped = false;
                 
-                var currentEquipped = equipmentController.GetEquippedItem("MainHand");
+                var currentEquippedObj = equipmentController.GetEquippedItem("MainHand");
+                var currentEquipped = currentEquippedObj as GameFramework.Items.EquippedItem;
                 if (currentEquipped != null && currentEquipped.item == item)
                 {
                     alreadyEquipped = true;
@@ -326,7 +328,8 @@ namespace GameFramework.UI
                     bool inInventory = inventoryController.HasItem(item, 1);
                     bool currentlyEquipped = false;
                     
-                    var equippedItem = equipmentController.GetEquippedItem("MainHand");
+                    var equippedItemObj = equipmentController.GetEquippedItem("MainHand");
+                    var equippedItem = equippedItemObj as GameFramework.Items.EquippedItem;
                     if (equippedItem != null && equippedItem.item == item)
                     {
                         currentlyEquipped = true;
@@ -346,6 +349,57 @@ namespace GameFramework.UI
             
             if (anyChanges && debugMode)
                 Debug.Log("Hotbar validated and updated");
+        }
+
+        // Interface implementations
+        public void UpdateHotbarSlot(int slotIndex, object itemStack)
+        {
+            if (itemStack is ItemStack stack && stack.item is EquippableItemDefinition equipItem)
+            {
+                SetHotbarItem(slotIndex, equipItem);
+            }
+            else if (itemStack is EquippableItemDefinition equipItem2)
+            {
+                SetHotbarItem(slotIndex, equipItem2);
+            }
+            else
+            {
+                SetHotbarItem(slotIndex, null);
+            }
+        }
+
+        public void RefreshHotbar()
+        {
+            ValidateHotbarItems();
+        }
+
+        object IHotbarController.GetHotbarItem(int slotIndex)
+        {
+            var item = GetHotbarItem(slotIndex);
+            return item != null ? new ItemStack(item, 1) : null;
+        }
+
+        public int GetHotbarSize()
+        {
+            return hotbarSize;
+        }
+
+        public bool AddItemToHotbar(object item)
+        {
+            if (item is EquippableItemDefinition equipItem)
+            {
+                return AddItemToHotbar(equipItem);
+            }
+            return false;
+        }
+
+        public int FindItemInHotbar(object item)
+        {
+            if (item is EquippableItemDefinition equipItem)
+            {
+                return FindItemInHotbar(equipItem);
+            }
+            return -1;
         }
     }
 }

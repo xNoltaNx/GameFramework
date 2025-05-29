@@ -1,20 +1,18 @@
 using System.Collections.Generic;
 using UnityEngine;
-using GameFramework.Items;
 
 namespace GameFramework.Core.Interfaces
 {
     public interface IInventoryController
     {
-        IReadOnlyList<GameFramework.Items.ItemStack> Items { get; }
         int Capacity { get; }
         
-        bool CanAddItem(GameFramework.Items.ItemDefinition item, int quantity = 1);
-        bool AddItem(GameFramework.Items.ItemDefinition item, int quantity = 1);
-        bool RemoveItem(GameFramework.Items.ItemDefinition item, int quantity = 1);
-        bool HasItem(GameFramework.Items.ItemDefinition item, int quantity = 1);
-        int GetItemCount(GameFramework.Items.ItemDefinition item);
-        List<System.Collections.Generic.KeyValuePair<GameFramework.Items.ItemDefinition, int>> GetAllItems();
+        bool CanAddItem(object item, int quantity = 1);
+        bool AddItem(object item, int quantity = 1);
+        bool RemoveItem(object item, int quantity = 1);
+        bool HasItem(object item, int quantity = 1);
+        int GetItemCount(object item);
+        System.Collections.Generic.List<System.Collections.Generic.KeyValuePair<object, int>> GetAllItems();
         
         void Clear();
     }

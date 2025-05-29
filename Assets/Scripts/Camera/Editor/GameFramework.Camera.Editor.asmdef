@@ -1,0 +1,20 @@
+{
+    "name": "GameFramework.Camera.Editor",
+    "rootNamespace": "GameFramework.Camera.Editor",
+    "references": [
+        "Unity.Cinemachine",
+        "GameFramework.Camera",
+        "GameFramework.Core"
+    ],
+    "includePlatforms": [
+        "Editor"
+    ],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

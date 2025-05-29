@@ -4,12 +4,11 @@ using GameFramework.Input;
 using GameFramework.Camera;
 using GameFramework.Locomotion;
 using GameFramework.Items;
-using GameFramework.Interaction;
 
 namespace GameFramework.Character
 {
     [RequireComponent(typeof(CharacterController))]
-    public class FirstPersonCharacterController : MonoBehaviour
+    public class FirstPersonCharacterController : MonoBehaviour, ICharacterController
     {
         [Header("Component References")]
         [SerializeField] private PlayerInputHandler inputHandler;
@@ -19,7 +18,7 @@ namespace GameFramework.Character
         [Header("Item System Components")]
         [SerializeField] private InventoryController inventoryController;
         [SerializeField] private EquipmentController equipmentController;
-        [SerializeField] private InteractionController interactionController;
+        [SerializeField] private MonoBehaviour interactionControllerComponent;
         
         [Header("UI References")]
         [SerializeField] private GameFramework.UI.InventoryUI inventoryUI;
@@ -95,12 +94,12 @@ namespace GameFramework.Character
                 }
             }
             
-            if (interactionController == null)
+            if (interaction == null)
             {
-                interactionController = GetComponent<InteractionController>();
-                if (interactionController == null)
+                interaction = GetComponent<IInteractionController>();
+                if (interaction == null && interactionControllerComponent != null)
                 {
-                    interactionController = gameObject.AddComponent<InteractionController>();
+                    interaction = interactionControllerComponent as IInteractionController;
                 }
             }
             
@@ -122,7 +121,7 @@ namespace GameFramework.Character
             locomotion = locomotionController;
             inventory = inventoryController;
             equipment = equipmentController;
-            interaction = interactionController;
+            // interaction already set in ValidateComponents
         }
 
         private void InitializeComponents()
@@ -233,8 +232,8 @@ namespace GameFramework.Character
             if (equipmentController == null)
                 equipmentController = GetComponent<EquipmentController>();
                 
-            if (interactionController == null)
-                interactionController = GetComponent<InteractionController>();
+            if (interaction == null)
+                interaction = GetComponent<IInteractionController>();
         }
     }
 }

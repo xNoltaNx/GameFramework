@@ -112,8 +112,8 @@ namespace GameFramework.Items
             {
                 Debug.LogWarning($"Interactor {interactor.name} has no IInventoryController!");
                 
-                // Try to get it from FirstPersonCharacterController
-                var characterController = interactor.GetComponent<GameFramework.Character.FirstPersonCharacterController>();
+                // Try to get it from ICharacterController
+                var characterController = interactor.GetComponent<ICharacterController>();
                 if (characterController != null)
                 {
                     inventory = characterController.GetInventoryController();

@@ -1,0 +1,21 @@
+{
+    "name": "GameFramework.Character",
+    "rootNamespace": "GameFramework.Character",
+    "references": [
+        "GameFramework.Core",
+        "GameFramework.Input",
+        "GameFramework.Camera",
+        "GameFramework.Locomotion",
+        "GameFramework.Items",
+        "GameFramework.UI"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

@@ -249,13 +249,21 @@ namespace GameFramework.Locomotion
         
         public void ChangeToGroundedState()
         {
-            // Always go to standing when landing, let the standing state handle crouch input
-            // This prevents issues with crouching while airborne
+            // Check input state to determine appropriate grounded state
             if (debugStateTransitions)
             {
                 Debug.Log($"Transitioning to grounded state. IsGrounded: {IsGrounded}, Velocity.y: {velocity.y}, IsCrouching: {isCrouching}");
             }
-            stateMachine?.ChangeState<StandingState>();
+            
+            // If crouching was set during airborne movement, go to crouching state
+            if (isCrouching)
+            {
+                stateMachine?.ChangeState<CrouchingState>();
+            }
+            else
+            {
+                stateMachine?.ChangeState<StandingState>();
+            }
         }
 
         private void HandleCrouchTransition()

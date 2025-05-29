@@ -13,7 +13,8 @@ namespace GameFramework.Core.Interfaces
         void SetFieldOfView(float fov);
         void SetTarget(Transform target);
         
-        // Camera effects support
+        // TODO: Update for Cinemachine virtual camera management
+        // These methods will be used to switch between Cinemachine virtual cameras
         void NotifyLocomotionStateChanged(string stateName, bool isMoving, bool isSprinting, float movementSpeed);
         void NotifyLanding(float landingVelocity);
         void NotifyMovementInput(Vector2 movementInput);

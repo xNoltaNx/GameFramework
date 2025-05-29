@@ -22,6 +22,9 @@ namespace GameFramework.Locomotion.States
 
         public override void HandleMovement(Vector2 movementInput, bool sprintHeld, bool crouchHeld)
         {
+            // Notify camera about movement input changes
+            NotifyCameraMovementInput(movementInput);
+            
             if (!crouchHeld && controller.CanStandUp())
             {
                 controller.ChangeToStandingState();

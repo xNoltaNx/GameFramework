@@ -2,11 +2,9 @@ using UnityEngine;
 #if UNITY_EDITOR
 using UnityEditor;
 #endif
-using GameFramework.Items;
 using GameFramework.Items.Abilities;
 using GameFramework.Locomotion;
 using GameFramework.Input;
-using GameFramework.Core.Interfaces;
 
 namespace GameFramework.Items.Examples
 {

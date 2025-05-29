@@ -1,0 +1,19 @@
+{
+    "name": "GameFramework.UI",
+    "rootNamespace": "GameFramework.UI",
+    "references": [
+        "Unity.TextMeshPro",
+        "Unity.InputSystem",
+        "GameFramework.Core",
+        "GameFramework.Items"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}
