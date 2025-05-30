@@ -268,9 +268,13 @@ namespace GameFramework.Camera.Editor
                 
                 // Step 4: Configure camera manager
                 ConfigureCameraManager(profile);
-                EditorUtility.DisplayProgressBar("Setting up Camera System", "Configuring camera manager...", 0.8f);
+                EditorUtility.DisplayProgressBar("Setting up Camera System", "Configuring camera manager...", 0.7f);
                 
-                // Step 5: Final configuration
+                // Step 5: Create and setup custom blender
+                SetupCustomBlender(profile);
+                EditorUtility.DisplayProgressBar("Setting up Camera System", "Setting up camera blends...", 0.8f);
+                
+                // Step 6: Final configuration
                 FinalizeSetup();
                 EditorUtility.DisplayProgressBar("Setting up Camera System", "Finalizing setup...", 1f);
                 
@@ -517,11 +521,122 @@ namespace GameFramework.Camera.Editor
         private void SetupVirtualCameras()
         {
             var manager = targetPlayer.GetComponent<CinemachineCameraManager>();
-            if (manager != null)
+            if (manager == null)
             {
-                // Trigger auto-creation and configuration of virtual cameras
-                manager.ConfigureCameras();
+                Debug.LogError("[CinemachineCameraSetupWizard] No CinemachineCameraManager found");
+                return;
             }
+
+            // Create virtual cameras directly in the wizard instead of relying on runtime creation
+            CreateVirtualCamerasInWizard(manager);
+            
+            // Also trigger the manager's configuration for any additional setup
+            manager.ConfigureCameras();
+        }
+
+        private void CreateVirtualCamerasInWizard(CinemachineCameraManager manager)
+        {
+            // Create virtual camera parent if it doesn't exist
+            Transform vcamParent = targetPlayer.transform.Find("vCameras");
+            if (vcamParent == null)
+            {
+                GameObject vcamParentGO = new GameObject("vCameras");
+                vcamParentGO.transform.SetParent(targetPlayer.transform);
+                vcamParent = vcamParentGO.transform;
+                
+                // Set the virtualCameraParent field using reflection
+                var parentField = typeof(CinemachineCameraManager).GetField("virtualCameraParent", 
+                    System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+                if (parentField != null)
+                {
+                    parentField.SetValue(manager, vcamParent);
+                }
+            }
+
+            // Create each virtual camera if it doesn't exist
+            CreateOrUpdateVirtualCamera(manager, "standingCamera", "vcam_Standing", vcamParent);
+            CreateOrUpdateVirtualCamera(manager, "walkingCamera", "vcam_Walking", vcamParent);
+            CreateOrUpdateVirtualCamera(manager, "sprintingCamera", "vcam_Sprinting", vcamParent);
+            CreateOrUpdateVirtualCamera(manager, "crouchingCamera", "vcam_Crouching", vcamParent);
+            CreateOrUpdateVirtualCamera(manager, "slidingCamera", "vcam_Sliding", vcamParent);
+            CreateOrUpdateVirtualCamera(manager, "airborneCamera", "vcam_Airborne", vcamParent);
+
+            EditorUtility.SetDirty(manager);
+            Debug.Log("[CinemachineCameraSetupWizard] Created virtual cameras in wizard");
+        }
+
+        private void CreateOrUpdateVirtualCamera(CinemachineCameraManager manager, string fieldName, string cameraName, Transform parent)
+        {
+            // Check if camera already exists in the field
+            var field = typeof(CinemachineCameraManager).GetField(fieldName, 
+                System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+            var existingCamera = field?.GetValue(manager) as CinemachineCamera;
+            
+            if (existingCamera == null)
+            {
+                // Create new virtual camera
+                GameObject cameraGO = new GameObject(cameraName);
+                cameraGO.transform.SetParent(parent);
+                
+                // Position at main camera location
+                if (mainCamera != null)
+                {
+                    cameraGO.transform.position = mainCamera.transform.position;
+                    cameraGO.transform.rotation = mainCamera.transform.rotation;
+                }
+                
+                // Add CinemachineCamera component
+                var vcam = cameraGO.AddComponent<CinemachineCamera>();
+                vcam.Priority = 0; // Start with low priority
+                
+                // Add noise component
+                var noise = cameraGO.AddComponent<CinemachineBasicMultiChannelPerlin>();
+                
+                // Set follow target
+                Transform followTarget = GetFollowTarget();
+                if (followTarget != null)
+                {
+                    vcam.Follow = followTarget;
+                }
+                
+                // Assign to manager field
+                field?.SetValue(manager, vcam);
+                
+                Debug.Log($"[CinemachineCameraSetupWizard] Created virtual camera: {cameraName}");
+            }
+            else
+            {
+                Debug.Log($"[CinemachineCameraSetupWizard] Virtual camera already exists: {existingCamera.name}");
+            }
+        }
+
+        private Transform GetFollowTarget()
+        {
+            // Look for existing camera rig or create follow target
+            Transform cameraRig = targetPlayer.transform.Find("CameraRig");
+            if (cameraRig != null)
+            {
+                return cameraRig;
+            }
+            
+            // Look for existing follow target
+            Transform followTarget = targetPlayer.transform.Find("CameraFollowTarget");
+            if (followTarget != null)
+            {
+                return followTarget;
+            }
+            
+            // Create new follow target at main camera position
+            if (mainCamera != null)
+            {
+                GameObject followGO = new GameObject("CameraFollowTarget");
+                followGO.transform.SetParent(targetPlayer.transform);
+                followGO.transform.position = mainCamera.transform.position;
+                followGO.transform.rotation = mainCamera.transform.rotation;
+                return followGO.transform;
+            }
+            
+            return null;
         }
 
         private void ConfigureCameraManager(MovementStateCameraProfile profile)
@@ -542,6 +657,113 @@ namespace GameFramework.Camera.Editor
                 // Configure performance settings would be done here
                 // Note: Performance settings are configured through the camera profile
             }
+        }
+
+        private void SetupCustomBlender(MovementStateCameraProfile profile)
+        {
+            if (profile == null || mainCamera == null)
+            {
+                Debug.LogWarning("[CinemachineCameraSetupWizard] Cannot setup custom blender - missing profile or main camera");
+                return;
+            }
+
+            // Get the CinemachineBrain
+            var brain = mainCamera.GetComponent<CinemachineBrain>();
+            if (brain == null)
+            {
+                Debug.LogWarning("[CinemachineCameraSetupWizard] No CinemachineBrain found on main camera");
+                return;
+            }
+
+            // Create the blender settings asset
+            string blenderPath = $"Assets/Content/Camera/{profileName}_BlenderSettings.asset";
+            var blenderSettings = CreateCustomBlenderSettings(profile, blenderPath);
+            
+            if (blenderSettings != null)
+            {
+                // Assign to the brain
+                brain.CustomBlends = blenderSettings;
+                EditorUtility.SetDirty(brain);
+                
+                Debug.Log($"[CinemachineCameraSetupWizard] Created and assigned custom blender: {blenderPath}");
+            }
+        }
+
+        private CinemachineBlenderSettings CreateCustomBlenderSettings(MovementStateCameraProfile profile, string assetPath)
+        {
+            var blenderSettings = ScriptableObject.CreateInstance<CinemachineBlenderSettings>();
+            
+            // Get the camera manager to access virtual cameras
+            var manager = targetPlayer.GetComponent<CinemachineCameraManager>();
+            if (manager == null)
+            {
+                Debug.LogError("[CinemachineCameraSetupWizard] No CinemachineCameraManager found");
+                return null;
+            }
+
+            // Get virtual cameras using reflection (since they're private fields)
+            var standingCamera = GetVirtualCamera(manager, "standingCamera");
+            var walkingCamera = GetVirtualCamera(manager, "walkingCamera");
+            var sprintingCamera = GetVirtualCamera(manager, "sprintingCamera");
+            var crouchingCamera = GetVirtualCamera(manager, "crouchingCamera");
+            var slidingCamera = GetVirtualCamera(manager, "slidingCamera");
+            var airborneCamera = GetVirtualCamera(manager, "airborneCamera");
+
+            var blendList = new System.Collections.Generic.List<CinemachineBlenderSettings.CustomBlend>();
+
+            // Define all the camera combinations and their blend times
+            var cameraMap = new System.Collections.Generic.Dictionary<string, (CinemachineCamera camera, float blendTime)>
+            {
+                { "Standing", (standingCamera, profile.BlendSettings.toStanding) },
+                { "Walking", (walkingCamera, profile.BlendSettings.toWalking) },
+                { "Sprinting", (sprintingCamera, profile.BlendSettings.toSprinting) },
+                { "Crouching", (crouchingCamera, profile.BlendSettings.toCrouching) },
+                { "Sliding", (slidingCamera, profile.BlendSettings.toSliding) },
+                { "Airborne", (airborneCamera, profile.BlendSettings.toAirborne) }
+            };
+
+            // Create blend instructions for all camera transitions
+            foreach (var fromCamera in cameraMap)
+            {
+                foreach (var toCamera in cameraMap)
+                {
+                    if (fromCamera.Key == toCamera.Key) continue; // Skip same camera
+                    if (fromCamera.Value.camera == null || toCamera.Value.camera == null) continue;
+
+                    var customBlend = new CinemachineBlenderSettings.CustomBlend
+                    {
+                        From = fromCamera.Value.camera.name,
+                        To = toCamera.Value.camera.name,
+                        Blend = new CinemachineBlendDefinition(
+                            profile.BlendSettings.blendStyle,
+                            toCamera.Value.blendTime
+                        )
+                    };
+                    blendList.Add(customBlend);
+                }
+            }
+
+            // Use reflection to set the CustomBlends array
+            var customBlendsField = typeof(CinemachineBlenderSettings).GetField("m_CustomBlends", 
+                System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+            if (customBlendsField != null)
+            {
+                customBlendsField.SetValue(blenderSettings, blendList.ToArray());
+            }
+
+            // Create asset
+            AssetDatabase.CreateAsset(blenderSettings, assetPath);
+            AssetDatabase.SaveAssets();
+
+            Debug.Log($"[CinemachineCameraSetupWizard] Created custom blender settings with {blendList.Count} blend instructions");
+            return blenderSettings;
+        }
+
+        private CinemachineCamera GetVirtualCamera(CinemachineCameraManager manager, string fieldName)
+        {
+            var field = typeof(CinemachineCameraManager).GetField(fieldName, 
+                System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+            return field?.GetValue(manager) as CinemachineCamera;
         }
 
         private MovementStateCameraProfile[] FindExistingCameraProfiles()

@@ -2075,89 +2075,6 @@ RectTransform:
   m_AnchoredPosition: {x: 0, y: 0}
   m_SizeDelta: {x: -20, y: 0}
   m_Pivot: {x: 0.5, y: 0.5}
---- !u!1 &575463290 stripped
-GameObject:
-  m_CorrespondingSourceObject: {fileID: 5106919921863684212, guid: 89e73578ec890cc42962270f7d45dc86, type: 3}
-  m_PrefabInstance: {fileID: 9060171764651448051}
-  m_PrefabAsset: {fileID: 0}
---- !u!114 &575463301
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 575463290}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 1c586bd5bf2aee24793045c9b5b7e018, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  primaryShakeSource: {fileID: 0}
-  secondaryShakeSource: {fileID: 0}
-  environmentalShakeSource: {fileID: 0}
-  shakePresets:
-  - name: Landing_Light
-    velocity: {x: 0.5, y: 1, z: 0.2}
-    duration: 0.3
-    frequency: 1
-  - name: Landing_Medium
-    velocity: {x: 1, y: 2, z: 0.5}
-    duration: 0.5
-    frequency: 1.2
-  - name: Landing_Heavy
-    velocity: {x: 2, y: 3, z: 1}
-    duration: 0.8
-    frequency: 1.5
-  - name: Explosion_Small
-    velocity: {x: 1.5, y: 1, z: 1.5}
-    duration: 0.6
-    frequency: 2
-  - name: Explosion_Large
-    velocity: {x: 3, y: 2, z: 3}
-    duration: 1.2
-    frequency: 2.5
-  - name: Footstep
-    velocity: {x: 0.1, y: 0.2, z: 0.05}
-    duration: 0.1
-    frequency: 0.8
-  - name: Environmental
-    velocity: {x: 0.3, y: 0.5, z: 0.2}
-    duration: 2
-    frequency: 1
-  globalShakeIntensity: 1
-  enableShake: 1
-  enableDebugLogging: 0
-  maxSimultaneousShakes: 3
-  shakeThrottleTime: 0.1
-  autoCreateSources: 1
---- !u!114 &575463302
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 575463290}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 3a213ab5ac64e8f40b7571545b391bf4, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  cameraProfile: {fileID: 11400000, guid: 87ee87923c78cb84d948bf053bfd1275, type: 2}
-  followTarget: {fileID: 0}
-  lookAtTarget: {fileID: 0}
-  standingCamera: {fileID: 0}
-  walkingCamera: {fileID: 0}
-  sprintingCamera: {fileID: 0}
-  crouchingCamera: {fileID: 0}
-  slidingCamera: {fileID: 0}
-  airborneCamera: {fileID: 0}
-  landingShakeSource: {fileID: 0}
-  customShakeSource: {fileID: 0}
-  autoConfigureCameras: 1
-  autoCreateCameras: 1
-  virtualCameraParent: {fileID: 1744364051}
-  distantUpdateFrequency: 0.1
-  performanceModeDistance: 50
 --- !u!1 &589700681
 GameObject:
   m_ObjectHideFlags: 0
@@ -2779,43 +2696,6 @@ MeshFilter:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 887539515}
   m_Mesh: {fileID: 10202, guid: 0000000000000000e000000000000000, type: 0}
---- !u!1 &947082752 stripped
-GameObject:
-  m_CorrespondingSourceObject: {fileID: 4971602493093896649, guid: 89e73578ec890cc42962270f7d45dc86, type: 3}
-  m_PrefabInstance: {fileID: 9060171764651448051}
-  m_PrefabAsset: {fileID: 0}
---- !u!114 &947082758
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 947082752}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 72ece51f2901e7445ab60da3685d6b5f, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  ShowDebugText: 0
-  ShowCameraFrustum: 1
-  IgnoreTimeScale: 0
-  WorldUpOverride: {fileID: 0}
-  ChannelMask: -1
-  UpdateMethod: 2
-  BlendUpdateMethod: 1
-  LensModeOverride:
-    Enabled: 0
-    DefaultMode: 2
-  DefaultBlend:
-    Style: 1
-    Time: 0.5
-    CustomCurve:
-      serializedVersion: 2
-      m_Curve: []
-      m_PreInfinity: 2
-      m_PostInfinity: 2
-      m_RotationOrder: 4
-  CustomBlends: {fileID: 0}
 --- !u!1 &1070177427
 GameObject:
   m_ObjectHideFlags: 0
@@ -4030,37 +3910,6 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!1 &1744364050
-GameObject:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  serializedVersion: 6
-  m_Component:
-  - component: {fileID: 1744364051}
-  m_Layer: 0
-  m_Name: vCameras
-  m_TagString: Untagged
-  m_Icon: {fileID: 0}
-  m_NavMeshLayer: 0
-  m_StaticEditorFlags: 0
-  m_IsActive: 1
---- !u!4 &1744364051
-Transform:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1744364050}
-  serializedVersion: 2
-  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: 2.052, z: 0.538}
-  m_LocalScale: {x: 1, y: 1, z: 1}
-  m_ConstrainProportionsScale: 0
-  m_Children: []
-  m_Father: {fileID: 0}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &1816807454
 GameObject:
   m_ObjectHideFlags: 0
@@ -5229,6 +5078,14 @@ PrefabInstance:
     serializedVersion: 3
     m_TransformParent: {fileID: 0}
     m_Modifications:
+    - target: {fileID: 1632749942654807194, guid: 89e73578ec890cc42962270f7d45dc86, type: 3}
+      propertyPath: inventoryUI
+      value: 
+      objectReference: {fileID: 315332198}
+    - target: {fileID: 3717906627796027250, guid: 89e73578ec890cc42962270f7d45dc86, type: 3}
+      propertyPath: field of view
+      value: 78
+      objectReference: {fileID: 0}
     - target: {fileID: 5106919921863684212, guid: 89e73578ec890cc42962270f7d45dc86, type: 3}
       propertyPath: m_Name
       value: FirstPerson_PlayerController
@@ -5276,16 +5133,7 @@ PrefabInstance:
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
-    m_AddedComponents:
-    - targetCorrespondingSourceObject: {fileID: 5106919921863684212, guid: 89e73578ec890cc42962270f7d45dc86, type: 3}
-      insertIndex: -1
-      addedObject: {fileID: 575463302}
-    - targetCorrespondingSourceObject: {fileID: 5106919921863684212, guid: 89e73578ec890cc42962270f7d45dc86, type: 3}
-      insertIndex: -1
-      addedObject: {fileID: 575463301}
-    - targetCorrespondingSourceObject: {fileID: 4971602493093896649, guid: 89e73578ec890cc42962270f7d45dc86, type: 3}
-      insertIndex: -1
-      addedObject: {fileID: 947082758}
+    m_AddedComponents: []
   m_SourcePrefab: {fileID: 100100000, guid: 89e73578ec890cc42962270f7d45dc86, type: 3}
 --- !u!1660057539 &9223372036854775807
 SceneRoots:
@@ -5298,4 +5146,3 @@ SceneRoots:
   - {fileID: 1897772904286381883}
   - {fileID: 536604221}
   - {fileID: 145936829}
-  - {fileID: 1744364051}

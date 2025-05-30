@@ -1,4 +1,5 @@
 using UnityEngine;
+using GameFramework.Core.Interfaces;
 
 namespace GameFramework.Locomotion.States
 {
@@ -11,12 +12,15 @@ namespace GameFramework.Locomotion.States
 
         public override void Enter()
         {
-            controller.SetCrouching(false);
+            base.Enter(); // Call base to notify camera state change
+
             controller.ResetSlideAvailability();
             
-            // Reset tracking variables when entering state
-            wasMovingLastFrame = false;
-            wasSprintingLastFrame = false;
+            // Initialize tracking variables to force change detection on first frame
+            wasMovingLastFrame = false; // Force change detection
+            wasSprintingLastFrame = false; // Force change detection
+            
+            // Debug logging is now controlled by camera profile debug settings
         }
 
         public override void HandleMovement(Vector2 movementInput, bool sprintHeld, bool crouchHeld)
@@ -26,7 +30,7 @@ namespace GameFramework.Locomotion.States
             
             if (crouchHeld)
             {
-                if (sprintHeld && movementInput.magnitude > 0.1f && controller.CanSlide)
+                if (sprintHeld && movementInput.magnitude > 0.1f && controller.CanSlide && CanInitiateSlide())
                 {
                     controller.ChangeToSlidingState(movementInput);
                 }
@@ -38,8 +42,9 @@ namespace GameFramework.Locomotion.States
             }
 
             float speed = sprintHeld ? controller.SprintSpeed : controller.WalkSpeed;
-            bool isCurrentlyMoving = movementInput.magnitude > 0.1f;
-            bool isCurrentlySprinting = sprintHeld && isCurrentlyMoving;
+            bool hasMovementInput = movementInput.magnitude > 0.1f;
+            bool isCurrentlyMoving = hasMovementInput || controller.IsMoving; // Use input OR velocity
+            bool isCurrentlySprinting = sprintHeld && hasMovementInput; // Sprint requires input
             
             // Update controller state
             controller.IsSprinting = isCurrentlySprinting;
@@ -50,12 +55,11 @@ namespace GameFramework.Locomotion.States
             
             if (movementStateChanged || sprintStateChanged)
             {
-                NotifyCameraStateChange();
+                // Override the base method to use our own movement detection
+                NotifyCameraStateChangeWithCustomMovement(isCurrentlyMoving, isCurrentlySprinting);
                 
-                // Simple debug logging - you can enable/disable this manually
-                #if UNITY_EDITOR
-                Debug.Log($"[StandingState] Movement change - Was Moving: {wasMovingLastFrame} -> {isCurrentlyMoving}, Was Sprinting: {wasSprintingLastFrame} -> {isCurrentlySprinting}");
-                #endif
+                // Debug logging - only when needed for debugging issues
+                // Debug.Log($"[StandingState] Movement change - Was Moving: {wasMovingLastFrame} -> {isCurrentlyMoving}, Was Sprinting: {wasSprintingLastFrame} -> {isCurrentlySprinting}, HasInput: {hasMovementInput}, Controller.IsMoving: {controller.IsMoving}");
             }
             
             // Update tracking variables
@@ -68,6 +72,36 @@ namespace GameFramework.Locomotion.States
             controller.ApplyMovement(targetVelocity);
         }
 
+        private void NotifyCameraStateChangeWithCustomMovement(bool isMoving, bool isSprinting)
+        {
+            var cameraController = GetCameraController();
+            if (cameraController != null)
+            {
+                string stateName = this.GetType().Name.Replace("State", ""); // GetStateName()
+                
+                // Use intended movement speed based on state, not current velocity
+                // This prevents high sprint velocities from affecting walking head bob
+                float movementSpeed = 0f;
+                if (isMoving)
+                {
+                    movementSpeed = isSprinting ? controller.SprintSpeed : controller.WalkSpeed;
+                }
+                
+                cameraController.NotifyLocomotionStateChanged(stateName, isMoving, isSprinting, movementSpeed);
+            }
+        }
+
+        private ICameraController GetCameraController()
+        {
+            // Cache lookup - copy from base class
+            var cameraController = controller.GetComponent<ICameraController>();
+            if (cameraController == null)
+            {
+                cameraController = controller.GetComponentInChildren<ICameraController>();
+            }
+            return cameraController;
+        }
+
         public override void HandleJump(bool jumpPressed, bool jumpHeld)
         {
             if (jumpPressed && controller.CanJump())
@@ -75,6 +109,16 @@ namespace GameFramework.Locomotion.States
                 controller.PerformNormalJump();
                 controller.ChangeToJumpingState();
             }
+        }
+
+        private bool CanInitiateSlide()
+        {
+            // Check if player is moving at or above the required sprint speed threshold
+            Vector3 horizontalVelocity = new Vector3(controller.Velocity.x, 0f, controller.Velocity.z);
+            float currentSpeed = horizontalVelocity.magnitude;
+            float requiredSpeed = controller.SprintSpeed * controller.SlideSpeedThreshold;
+            
+            return currentSpeed >= requiredSpeed;
         }
     }
 }

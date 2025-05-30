@@ -10,23 +10,32 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: c5638b9bec121564fba7dee20f1190c4, type: 3}
-  m_Name: MovementCameraProfile
+  m_Name: DefaultMovementCameraProfile
   m_EditorClassIdentifier: 
   profileName: Default Movement Camera
   description: Camera behavior configuration for different movement states
-  globalIntensity: 1
-  transitionSpeed: 1.5
+  globalIntensity: 1.5
+  transitionSpeed: 1
+  defaultBlendTime: 2.98
+  blendSettings:
+    toStanding: 5
+    toWalking: 5
+    toSprinting: 4.56
+    toCrouching: 5
+    toSliding: 4.89
+    toAirborne: 5
+    blendStyle: 1
   standingState:
     stateName: Standing
     fieldOfView: 75
-    enableHeadBob: 0
+    enableHeadBob: 1
     enableFOVEffects: 0
     enableCameraRoll: 0
     noiseSettings:
-      noiseProfile: {fileID: 0}
-      amplitudeGain: 0
+      noiseProfile: {fileID: 11400000, guid: 27d6c79f7a4a7184a8dad55fd74566cb, type: 2}
+      amplitudeGain: 0.189
       frequencyGain: 1
-      scaleWithMovement: 1
+      scaleWithMovement: 0
       minimumIntensity: 0.1
       maximumIntensity: 1.5
     maxRollAngle: 2
@@ -65,8 +74,8 @@ MonoBehaviour:
     enableFOVEffects: 0
     enableCameraRoll: 0
     noiseSettings:
-      noiseProfile: {fileID: 0}
-      amplitudeGain: 0.6
+      noiseProfile: {fileID: 11400000, guid: 3faf7808af34ae54d960b866c533f8b5, type: 2}
+      amplitudeGain: 0.13
       frequencyGain: 1
       scaleWithMovement: 1
       minimumIntensity: 0.1
@@ -102,13 +111,13 @@ MonoBehaviour:
         m_RotationOrder: 4
   sprintingState:
     stateName: Sprinting
-    fieldOfView: 80
+    fieldOfView: 85
     enableHeadBob: 1
     enableFOVEffects: 1
     enableCameraRoll: 0
     noiseSettings:
-      noiseProfile: {fileID: 0}
-      amplitudeGain: 0.6
+      noiseProfile: {fileID: 11400000, guid: 7792ca47335437346a65cf36aaec6d25, type: 2}
+      amplitudeGain: 0.65
       frequencyGain: 1
       scaleWithMovement: 1
       minimumIntensity: 0.1
@@ -149,7 +158,7 @@ MonoBehaviour:
     enableFOVEffects: 0
     enableCameraRoll: 1
     noiseSettings:
-      noiseProfile: {fileID: 0}
+      noiseProfile: {fileID: 11400000, guid: b60a2a1e1d11a514d9c2ea01c6d5d165, type: 2}
       amplitudeGain: 0.6
       frequencyGain: 1
       scaleWithMovement: 1
@@ -186,13 +195,13 @@ MonoBehaviour:
         m_RotationOrder: 4
   slidingState:
     stateName: Sliding
-    fieldOfView: 85
+    fieldOfView: 100
     enableHeadBob: 0
     enableFOVEffects: 1
     enableCameraRoll: 1
     noiseSettings:
       noiseProfile: {fileID: 0}
-      amplitudeGain: 0
+      amplitudeGain: 1
       frequencyGain: 1
       scaleWithMovement: 1
       minimumIntensity: 0.1
@@ -230,7 +239,7 @@ MonoBehaviour:
     stateName: Airborne
     fieldOfView: 78
     enableHeadBob: 0
-    enableFOVEffects: 0
+    enableFOVEffects: 1
     enableCameraRoll: 0
     noiseSettings:
       noiseProfile: {fileID: 0}

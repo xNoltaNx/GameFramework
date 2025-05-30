@@ -15,6 +15,8 @@ namespace GameFramework.Locomotion.States
 
         public override void Enter()
         {
+            base.Enter(); // Call base to notify camera state change
+            
             mantleComplete = false;
             controller.SetVelocity(Vector3.zero);
             mantleTimer = 0f;

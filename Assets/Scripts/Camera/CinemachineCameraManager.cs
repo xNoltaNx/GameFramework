@@ -28,6 +28,9 @@ namespace GameFramework.Camera
         [SerializeField] private CinemachineImpulseSource landingShakeSource;
         [SerializeField] private CinemachineImpulseSource customShakeSource;
         
+        [Header("Cinemachine Brain")]
+        [SerializeField] private CinemachineBrain cinemachineBrain;
+        
         [Header("Auto-Setup")]
         [Tooltip("Automatically configure virtual cameras on start")]
         [SerializeField] private bool autoConfigureCameras = true;
@@ -50,6 +53,10 @@ namespace GameFramework.Camera
         private CinemachineCamera activeCamera;
         private Dictionary<MovementStateType, CinemachineCamera> stateToCamera;
         private Dictionary<CinemachineCamera, CinemachineBasicMultiChannelPerlin> cameraNoiseComponents;
+        
+        // Transition timing protection
+        private float lastTransitionTime = 0f;
+        private const float MIN_TRANSITION_INTERVAL = 0.1f;
         
         // Movement tracking
         private Vector2 currentMovementInput = Vector2.zero;
@@ -106,6 +113,17 @@ namespace GameFramework.Camera
             {
                 ApplyProfileSettings();
                 SetCameraState(MovementStateType.Standing);
+                
+                // Initialize the starting camera's amplitude immediately to avoid delay on first frame
+                if (activeCamera != null && cameraNoiseComponents.TryGetValue(activeCamera, out var initialNoise))
+                {
+                    var initialStateConfig = cameraProfile.GetStateConfiguration(currentState);
+                    if (initialStateConfig.enableHeadBob)
+                    {
+                        float initialAmplitude = initialStateConfig.noiseSettings.amplitudeGain * cameraProfile.GlobalIntensity;
+                        initialNoise.AmplitudeGain = initialAmplitude;
+                    }
+                }
             }
             else
             {
@@ -142,6 +160,9 @@ namespace GameFramework.Camera
             {
                 mainCamera = FindObjectOfType<UnityEngine.Camera>();
             }
+            
+            // Initialize Cinemachine Brain
+            InitializeCinemachineBrain();
         }
 
         private void CreateMissingCameras()
@@ -218,9 +239,16 @@ namespace GameFramework.Camera
             // Add noise component for head bob
             var noise = vcam.gameObject.AddComponent<CinemachineBasicMultiChannelPerlin>();
             
+            // Immediately cache the noise component
+            if (cameraNoiseComponents == null)
+            {
+                cameraNoiseComponents = new Dictionary<CinemachineCamera, CinemachineBasicMultiChannelPerlin>();
+            }
+            cameraNoiseComponents[vcam] = noise;
+            
             if (cameraProfile?.EnableDebugLogging == true)
             {
-                Debug.Log($"[CinemachineCameraManager] Created virtual camera: {cameraName}");
+                Debug.Log($"[CinemachineCameraManager] Created virtual camera: {cameraName} with noise component");
             }
             
             return vcam;
@@ -241,7 +269,7 @@ namespace GameFramework.Camera
             stateToCamera[MovementStateType.Sliding] = slidingCamera;
             stateToCamera[MovementStateType.Airborne] = airborneCamera;
             
-            // Cache noise components
+            // Cache noise components for all cameras
             foreach (var kvp in stateToCamera)
             {
                 if (kvp.Value != null)
@@ -251,7 +279,47 @@ namespace GameFramework.Camera
                     {
                         cameraNoiseComponents[kvp.Value] = noise;
                     }
+                    else
+                    {
+                        // Add noise component if missing for manually assigned cameras
+                        noise = kvp.Value.gameObject.AddComponent<CinemachineBasicMultiChannelPerlin>();
+                        cameraNoiseComponents[kvp.Value] = noise;
+                        Debug.Log($"[CinemachineCameraManager] Added missing noise component to manually assigned camera: {kvp.Value.name}");
+                    }
                 }
+            }
+        }
+        
+        private void InitializeCinemachineBrain()
+        {
+            // Find the CinemachineBrain if not manually assigned
+            if (cinemachineBrain == null)
+            {
+                cinemachineBrain = FindObjectOfType<CinemachineBrain>();
+                if (cinemachineBrain == null && mainCamera != null)
+                {
+                    cinemachineBrain = mainCamera.GetComponent<CinemachineBrain>();
+                }
+            }
+            
+            if (cinemachineBrain != null)
+            {
+                if (cameraProfile?.EnableDebugLogging == true)
+                {
+                    Debug.Log($"[CinemachineCameraManager] Found CinemachineBrain: {cinemachineBrain.name}");
+                    if (cinemachineBrain.CustomBlends != null)
+                    {
+                        Debug.Log($"[CinemachineCameraManager] CinemachineBrain has custom blends assigned: {cinemachineBrain.CustomBlends.name}");
+                    }
+                    else
+                    {
+                        Debug.Log("[CinemachineCameraManager] No custom blends assigned - using default blend settings");
+                    }
+                }
+            }
+            else
+            {
+                Debug.LogWarning("[CinemachineCameraManager] CinemachineBrain not found! Camera blending may not work properly.");
             }
         }
         #endregion
@@ -291,8 +359,17 @@ namespace GameFramework.Camera
         {
             if (!stateToCamera.TryGetValue(stateType, out var vcam) || vcam == null) return;
             
-            // Apply FOV
-            vcam.Lens.FieldOfView = stateConfig.fieldOfView;
+            // Apply FOV only if FOV effects are enabled
+            if (stateConfig.enableFOVEffects)
+            {
+                vcam.Lens.FieldOfView = stateConfig.fieldOfView;
+            }
+            else
+            {
+                // When FOV effects are disabled, use a consistent default FOV
+                // Use the standing state's FOV as the default since it's the most neutral
+                vcam.Lens.FieldOfView = cameraProfile?.StandingState?.fieldOfView ?? 75f;
+            }
             
             // Apply follow target only - no LookAt for first-person cameras
             vcam.Follow = followTarget;
@@ -312,24 +389,51 @@ namespace GameFramework.Camera
             {
                 ApplyNoiseSettings(noise, stateConfig.noiseSettings, stateConfig.enableHeadBob);
             }
+            else
+            {
+                Debug.LogWarning($"[CinemachineCameraManager] No noise component found for {vcam.name} ({stateType}). Head bob will not work.");
+                
+                // Try to find and cache the noise component if it exists
+                var missingNoise = vcam.GetComponent<CinemachineBasicMultiChannelPerlin>();
+                if (missingNoise != null)
+                {
+                    cameraNoiseComponents[vcam] = missingNoise;
+                    ApplyNoiseSettings(missingNoise, stateConfig.noiseSettings, stateConfig.enableHeadBob);
+                    Debug.Log($"[CinemachineCameraManager] Found and cached missing noise component for {vcam.name}");
+                }
+            }
             
             if (cameraProfile.EnableDebugLogging)
             {
-                Debug.Log($"[CinemachineCameraManager] Applied settings for {stateType}: FOV={stateConfig.fieldOfView}, HeadBob={stateConfig.enableHeadBob}");
+                string fovInfo = stateConfig.enableFOVEffects ? $"FOV={stateConfig.fieldOfView}" : "FOV=disabled";
+                Debug.Log($"[CinemachineCameraManager] Applied settings for {stateType}: {fovInfo}, HeadBob={stateConfig.enableHeadBob}");
             }
         }
 
         private void ApplyNoiseSettings(CinemachineBasicMultiChannelPerlin noise, GameFrameworkNoiseSettings noiseSettings, bool enabled)
         {
+            // Always set the noise profile and frequency (these don't need blending)
+            noise.NoiseProfile = noiseSettings.noiseProfile;
+            noise.FrequencyGain = noiseSettings.frequencyGain;
+            
             if (!enabled)
             {
-                noise.AmplitudeGain = 0f;
+                // Don't immediately set to 0, let UpdateHeadBobIntensity handle the blending
+                if (cameraProfile?.EnableDebugLogging == true)
+                {
+                    Debug.Log($"[CinemachineCameraManager] Noise disabled for camera {noise.gameObject.name} - will blend to zero");
+                }
                 return;
             }
             
-            noise.NoiseProfile = noiseSettings.noiseProfile;
-            noise.AmplitudeGain = noiseSettings.amplitudeGain * cameraProfile.GlobalIntensity;
-            noise.FrequencyGain = noiseSettings.frequencyGain;
+            // Don't immediately set amplitude - let UpdateHeadBobIntensity handle blending
+            // This prevents jarring transitions when switching camera states
+            
+            if (cameraProfile?.EnableDebugLogging == true)
+            {
+                float targetAmplitude = noiseSettings.amplitudeGain * cameraProfile.GlobalIntensity;
+                Debug.Log($"[CinemachineCameraManager] Applied noise to {noise.gameObject.name}: Profile={noiseSettings.noiseProfile?.name ?? "null"}, Target Amplitude={targetAmplitude:F3}, Frequency={noise.FrequencyGain:F3}");
+            }
         }
 
         private void ConfigureShakeSources()
@@ -352,27 +456,44 @@ namespace GameFramework.Camera
         #region State Management
         public void SetCameraState(MovementStateType newState, bool forceUpdate = false)
         {
-            if (currentState == newState && !forceUpdate) return;
+            if (currentState == newState && !forceUpdate) 
+            {
+                //Debug.Log($"[CinemachineCameraManager] Camera state unchanged: {currentState}");
+                return;
+            }
+            
+            // Prevent rapid state changes that can interrupt blends
+            float timeSinceLastTransition = Time.time - lastTransitionTime;
+            if (timeSinceLastTransition < MIN_TRANSITION_INTERVAL && !forceUpdate)
+            {
+                if (cameraProfile?.EnableDebugLogging == true)
+                {
+                    Debug.Log($"[CinemachineCameraManager] Ignoring rapid transition to {newState} (time since last: {timeSinceLastTransition:F3}s)");
+                }
+                return;
+            }
+            
+            lastTransitionTime = Time.time;
             
             previousState = currentState;
             currentState = newState;
             
-            // Update camera priorities
+            // Update camera priorities - blend times are handled by CinemachineBlenderSettings
             UpdateCameraPriorities();
             
             // Update active camera reference
             if (stateToCamera.TryGetValue(currentState, out var newActiveCamera))
             {
                 activeCamera = newActiveCamera;
+                Debug.Log($"[CinemachineCameraManager] Camera state changed: {previousState} -> {currentState}, Active Camera: {newActiveCamera?.name ?? "NULL"}");
+            }
+            else
+            {
+                Debug.LogWarning($"[CinemachineCameraManager] No camera found for state: {currentState}");
             }
             
             // Invoke events
             OnCameraStateChanged?.Invoke(currentState);
-            
-            if (cameraProfile?.EnableDebugLogging == true)
-            {
-                Debug.Log($"[CinemachineCameraManager] Camera state changed: {previousState} -> {currentState}");
-            }
         }
 
         private void UpdateCameraPriorities()
@@ -401,6 +522,13 @@ namespace GameFramework.Camera
             
             // Determine camera state based on movement
             var newState = DetermineStateFromMovement(stateName, moving, sprinting);
+            
+            // Debug logging to trace transition issues (only when debug logging enabled)
+            if (cameraProfile?.EnableDebugLogging == true)
+            {
+                Debug.Log($"[CinemachineCameraManager] Movement notification - StateName: '{stateName}', Moving: {moving}, Sprinting: {sprinting}, Speed: {movementSpeed:F2} -> Camera State: {newState}");
+            }
+            
             SetCameraState(newState);
         }
 
@@ -434,22 +562,38 @@ namespace GameFramework.Camera
             if (!cameraNoiseComponents.TryGetValue(activeCamera, out var noise)) return;
             
             var stateConfig = cameraProfile.GetStateConfiguration(currentState);
-            if (!stateConfig.enableHeadBob) return;
+            if (!stateConfig.enableHeadBob) 
+            {
+                // Smoothly blend to zero when head bob is disabled
+                noise.AmplitudeGain = Mathf.Lerp(noise.AmplitudeGain, 0f, Time.deltaTime * 5f);
+                return;
+            }
             
-            // Scale noise based on movement
-            float intensityScale = 1f;
+            // Calculate base amplitude from profile settings
+            float baseAmplitude = stateConfig.noiseSettings.amplitudeGain * cameraProfile.GlobalIntensity;
+            
+            // Only apply movement scaling if enabled for this specific state
+            float finalAmplitude = baseAmplitude;
             if (stateConfig.noiseSettings.scaleWithMovement)
             {
                 float normalizedSpeed = Mathf.Clamp01(currentMovementSpeed / 8f); // Assume max speed of 8
-                intensityScale = Mathf.Lerp(
+                float intensityScale = Mathf.Lerp(
                     stateConfig.noiseSettings.minimumIntensity,
                     stateConfig.noiseSettings.maximumIntensity,
                     normalizedSpeed
                 );
+                finalAmplitude = baseAmplitude * intensityScale;
             }
             
-            float finalAmplitude = stateConfig.noiseSettings.amplitudeGain * intensityScale * cameraProfile.GlobalIntensity;
-            noise.AmplitudeGain = finalAmplitude;
+            // Smoothly blend to the target amplitude to avoid jarring transitions
+            float previousAmplitude = noise.AmplitudeGain;
+            noise.AmplitudeGain = Mathf.Lerp(noise.AmplitudeGain, finalAmplitude, Time.deltaTime * 3f);
+            
+            // Debug logging for amplitude changes
+            if (cameraProfile?.EnableDebugLogging == true && Mathf.Abs(previousAmplitude - noise.AmplitudeGain) > 0.001f)
+            {
+                Debug.Log($"[CinemachineCameraManager] {currentState} head bob: {previousAmplitude:F3} -> {noise.AmplitudeGain:F3} (target: {finalAmplitude:F3}, scale: {stateConfig.noiseSettings.scaleWithMovement}, speed: {currentMovementSpeed:F2})");
+            }
         }
 
         private void UpdateCameraRoll()

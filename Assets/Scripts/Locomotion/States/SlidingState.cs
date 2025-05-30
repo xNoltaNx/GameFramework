@@ -11,6 +11,8 @@ namespace GameFramework.Locomotion.States
 
         public override void Enter()
         {
+            base.Enter(); // Call base to notify camera state change
+            
             controller.SetCrouching(true);
         }
 
@@ -25,19 +27,32 @@ namespace GameFramework.Locomotion.States
 
         public override void Update()
         {
-            base.Update();
+            // Don't call base.Update() to avoid GroundedState's immediate airborne transition
             
             slideTimer -= Time.deltaTime;
+            HandleSlideMovement();
             
             Vector3 horizontalVelocity = new Vector3(controller.Velocity.x, 0f, controller.Velocity.z);
             
-            if (slideTimer <= 0f || !controller.IsGrounded || horizontalVelocity.magnitude < controller.MinSlideSpeed)
+            // Exit conditions - check these AFTER movement is applied
+            if (slideTimer <= 0f)
             {
                 controller.ChangeToCrouchingState();
                 return;
             }
             
-            HandleSlideMovement();
+            if (horizontalVelocity.magnitude < controller.MinSlideSpeed)
+            {
+                controller.ChangeToCrouchingState();
+                return;
+            }
+            
+            // Only check grounded after a brief delay to allow slide to establish
+            if (slideTimer < controller.SlideDuration - 0.1f && !controller.IsGrounded)
+            {
+                controller.ChangeToFallingState();
+                return;
+            }
         }
 
         public override void HandleMovement(Vector2 movementInput, bool sprintHeld, bool crouchHeld)

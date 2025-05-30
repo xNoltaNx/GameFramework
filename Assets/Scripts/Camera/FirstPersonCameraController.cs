@@ -264,23 +264,6 @@ namespace GameFramework.Camera
 
         public void HandleLookInput(Vector2 lookInput)
         {
-            if (debugInput && lookInput != Vector2.zero)
-            {
-                Debug.Log($"[FirstPersonCameraController] Look Input: {lookInput}, Target: {(target != null ? target.name : "NULL")}, CameraRig: {(cameraRig != null ? cameraRig.name : "NULL")}");
-            }
-            
-            if (target == null)
-            {
-                Debug.LogError("[FirstPersonCameraController] Target is null! Cannot process look input.");
-                return;
-            }
-            
-            if (cameraRig == null)
-            {
-                Debug.LogError("[FirstPersonCameraController] CameraRig is null! Cannot process look input.");
-                return;
-            }
-
             float mouseX = lookInput.x * mouseSensitivity;
             float mouseY = lookInput.y * mouseSensitivity;
 
@@ -296,10 +279,6 @@ namespace GameFramework.Camera
             target.rotation = Quaternion.Euler(0f, horizontalRotation, 0f);
             cameraRig.localRotation = Quaternion.Euler(verticalRotation, 0f, 0f);
 
-            if (debugInput && lookInput != Vector2.zero)
-            {
-                Debug.Log($"[FirstPersonCameraController] Applied Rotation - H: {horizontalRotation:F1}, V: {verticalRotation:F1}");
-            }
         }
 
         public void SetSensitivity(float sensitivity)

@@ -25,6 +25,13 @@ namespace GameFramework.Camera
         [Tooltip("Speed of transitions between different camera states")]
         [SerializeField] private float transitionSpeed = 1.5f;
         
+        [Header("Camera Blend Settings")]
+        [Range(0f, 3f)]
+        [Tooltip("Default blend time for camera transitions")]
+        [SerializeField] private float defaultBlendTime = 0.8f;
+        
+        [SerializeField] private CameraBlendSettings blendSettings = new CameraBlendSettings();
+        
         [Header("Movement State Configurations")]
         [SerializeField] private MovementCameraState standingState = new MovementCameraState("Standing", 75f);
         [SerializeField] private MovementCameraState walkingState = new MovementCameraState("Walking", 75f, true);
@@ -48,6 +55,8 @@ namespace GameFramework.Camera
         public string Description => description;
         public float GlobalIntensity => globalIntensity;
         public float TransitionSpeed => transitionSpeed;
+        public float DefaultBlendTime => defaultBlendTime;
+        public CameraBlendSettings BlendSettings => blendSettings;
         public bool EnableDebugLogging => enableDebugLogging;
         public bool EnablePerformanceMode => enablePerformanceMode;
         
@@ -161,6 +170,56 @@ namespace GameFramework.Camera
             // Ensure valid values
             globalIntensity = Mathf.Clamp(globalIntensity, 0f, 2f);
             transitionSpeed = Mathf.Clamp(transitionSpeed, 0.1f, 3f);
+        }
+    }
+
+    /// <summary>
+    /// Configuration for camera blend settings between different states
+    /// </summary>
+    [System.Serializable]
+    public class CameraBlendSettings
+    {
+        [Header("Blend Times (seconds)")]
+        [Range(0f, 5f)]
+        [Tooltip("Blend time when transitioning to standing")]
+        public float toStanding = 0.6f;
+        
+        [Range(0f, 5f)]
+        [Tooltip("Blend time when transitioning to walking")]
+        public float toWalking = 0.4f;
+        
+        [Range(0f, 5f)]
+        [Tooltip("Blend time when transitioning to sprinting")]
+        public float toSprinting = 0.3f;
+        
+        [Range(0f, 5f)]
+        [Tooltip("Blend time when transitioning to crouching")]
+        public float toCrouching = 0.8f;
+        
+        [Range(0f, 5f)]
+        [Tooltip("Blend time when transitioning to sliding")]
+        public float toSliding = 0.2f;
+        
+        [Range(0f, 5f)]
+        [Tooltip("Blend time when transitioning to airborne")]
+        public float toAirborne = 0.15f;
+        
+        [Header("Blend Curves")]
+        [Tooltip("Blend curve style for smooth transitions")]
+        public Unity.Cinemachine.CinemachineBlendDefinition.Styles blendStyle = Unity.Cinemachine.CinemachineBlendDefinition.Styles.EaseInOut;
+        
+        public float GetBlendTimeForState(MovementStateType targetState)
+        {
+            return targetState switch
+            {
+                MovementStateType.Standing => toStanding,
+                MovementStateType.Walking => toWalking,
+                MovementStateType.Sprinting => toSprinting,
+                MovementStateType.Crouching => toCrouching,
+                MovementStateType.Sliding => toSliding,
+                MovementStateType.Airborne => toAirborne,
+                _ => 0.5f
+            };
         }
     }
 

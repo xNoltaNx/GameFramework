@@ -82,8 +82,37 @@ namespace GameFramework.Locomotion.States
 
         protected virtual float GetCurrentMovementSpeed()
         {
-            Vector3 horizontalVelocity = new Vector3(controller.Velocity.x, 0f, controller.Velocity.z);
-            return horizontalVelocity.magnitude;
+            // For most states, use intended movement speed rather than current velocity
+            // This prevents velocity overshoot from affecting camera head bob
+            
+            string stateName = GetStateName().ToLower();
+            switch (stateName)
+            {
+                case "standing":
+                    // Standing state handles this with custom logic
+                    return controller.IsMoving ? (controller.IsSprinting ? controller.SprintSpeed : controller.WalkSpeed) : 0f;
+                    
+                case "crouching":
+                    return controller.IsMoving ? controller.CrouchSpeed : 0f;
+                    
+                case "sliding":
+                    // For sliding, use actual velocity since it's intentionally variable
+                    Vector3 slideVelocity = new Vector3(controller.Velocity.x, 0f, controller.Velocity.z);
+                    return slideVelocity.magnitude;
+                    
+                case "jumping":
+                case "falling":
+                case "airborne":
+                case "mantle":
+                    // For airborne states, use actual velocity
+                    Vector3 airborneVelocity = new Vector3(controller.Velocity.x, 0f, controller.Velocity.z);
+                    return airborneVelocity.magnitude;
+                    
+                default:
+                    // Fallback to velocity for unknown states
+                    Vector3 horizontalVelocity = new Vector3(controller.Velocity.x, 0f, controller.Velocity.z);
+                    return horizontalVelocity.magnitude;
+            }
         }
     }
 }

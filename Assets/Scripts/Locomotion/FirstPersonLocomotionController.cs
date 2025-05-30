@@ -47,6 +47,9 @@ namespace GameFramework.Locomotion
         [SerializeField] private float slideDuration = 1.5f;
         [SerializeField] private float slideDeceleration = 8f;
         [SerializeField] private float minSlideSpeed = 3f;
+        [Range(0.5f, 1f)]
+        [Tooltip("Minimum sprint speed percentage required to initiate a slide (0.85 = 85% of max sprint speed)")]
+        [SerializeField] private float slideSpeedThreshold = 0.85f;
         
         [Header("Slide Jump Settings")]
         [SerializeField] private float slideJumpForwardBoost = 8f;
@@ -96,6 +99,7 @@ namespace GameFramework.Locomotion
         public float SlideDuration => slideDuration;
         public float SlideDeceleration => slideDeceleration;
         public float MinSlideSpeed => minSlideSpeed;
+        public float SlideSpeedThreshold => slideSpeedThreshold;
         public float SlideJumpForwardBoost => slideJumpForwardBoost;
         public float SlideJumpHeightMultiplier => slideJumpHeightMultiplier;
         public bool MaintainSlideDirection => maintainSlideDirection;
