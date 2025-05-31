@@ -999,7 +999,7 @@ Camera:
     height: 1
   near clip plane: 0.1
   far clip plane: 5000
-  field of view: 75
+  field of view: 85
   orthographic: 0
   orthographic size: 10
   m_Depth: 0
@@ -1120,7 +1120,7 @@ GameObject:
   - component: {fileID: 6010380276838973811}
   m_Layer: 3
   m_Name: FirstPerson_PlayerController
-  m_TagString: Untagged
+  m_TagString: Player
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
@@ -1246,7 +1246,7 @@ MonoBehaviour:
     serializedVersion: 2
     m_Bits: 1
   mantleEasing:
-    easingType: 7
+    easingType: 2
     customCurve:
       serializedVersion: 2
       m_Curve:
@@ -1271,6 +1271,22 @@ MonoBehaviour:
       m_PreInfinity: 2
       m_PostInfinity: 2
       m_RotationOrder: 4
+  locomotionConfig:
+    groundCheckDelay: 0.1
+    slideExitDelay: 0.1
+    mantleGroundCheckDelay: 0.05
+    slideSpeedThreshold: 0.85
+    minSlideSpeed: 3
+    slideDeceleration: 8
+    mantleMinHeight: 0.5
+    mantleArcHeightMultiplier: 1.5
+    mantleArcMinHeight: 0.5
+    mantleSafeClearanceDistance: 0.6
+    directionChangeThreshold: 0.8
+    airControlMinInput: 0.1
+    airDragThreshold: 0.1
+    movementInputDeadzone: 0.1
+    velocityThreshold: 0.1
 --- !u!114 &7472508916030128468
 MonoBehaviour:
   m_ObjectHideFlags: 0

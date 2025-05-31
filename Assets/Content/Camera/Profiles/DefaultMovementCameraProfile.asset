@@ -16,15 +16,6 @@ MonoBehaviour:
   description: Camera behavior configuration for different movement states
   globalIntensity: 1.5
   transitionSpeed: 1
-  defaultBlendTime: 2.98
-  blendSettings:
-    toStanding: 5
-    toWalking: 5
-    toSprinting: 4.56
-    toCrouching: 5
-    toSliding: 4.89
-    toAirborne: 5
-    blendStyle: 1
   standingState:
     stateName: Standing
     fieldOfView: 75

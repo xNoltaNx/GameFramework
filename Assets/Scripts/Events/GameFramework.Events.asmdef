@@ -1,0 +1,17 @@
+{
+    "name": "GameFramework.Events",
+    "rootNamespace": "GameFramework.Events",
+    "references": [
+        "GameFramework.Core",
+        "Unity.Mathematics"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

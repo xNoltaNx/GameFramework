@@ -1,0 +1,19 @@
+{
+    "name": "GameFramework.Events.Editor",
+    "rootNamespace": "GameFramework.Events.Editor",
+    "references": [
+        "GameFramework.Core",
+        "GameFramework.Events"
+    ],
+    "includePlatforms": [
+        "Editor"
+    ],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}
