@@ -637,8 +637,8 @@ Transform:
   m_GameObject: {fileID: 142846886}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: -2.11, y: 1.74, z: -42.54}
-  m_LocalScale: {x: 3.6763, y: 8.164694, z: 10.605}
+  m_LocalPosition: {x: -2.11, y: 4, z: -42.54}
+  m_LocalScale: {x: 4, y: 8, z: 10}
   m_ConstrainProportionsScale: 0
   m_Children: []
   m_Father: {fileID: 589700682}
@@ -959,8 +959,8 @@ Transform:
   m_GameObject: {fileID: 263459365}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 3.88, y: 0.97, z: -42.54}
-  m_LocalScale: {x: 3.6763, y: 4.0227447, z: 10.605}
+  m_LocalPosition: {x: 3.88, y: 2, z: -42.54}
+  m_LocalScale: {x: 4, y: 4, z: 10}
   m_ConstrainProportionsScale: 0
   m_Children: []
   m_Father: {fileID: 589700682}
@@ -2258,8 +2258,8 @@ Transform:
   m_GameObject: {fileID: 818124923}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: -9.24, y: 1.91, z: -42.54}
-  m_LocalScale: {x: 3.6763, y: 14.550301, z: 10.605}
+  m_LocalPosition: {x: -9.24, y: 6, z: -42.54}
+  m_LocalScale: {x: 4, y: 12, z: 10}
   m_ConstrainProportionsScale: 0
   m_Children: []
   m_Father: {fileID: 589700682}
@@ -2616,8 +2616,8 @@ Transform:
   m_GameObject: {fileID: 887539515}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: -15.5, y: 4.62, z: -42.54}
-  m_LocalScale: {x: 3.6763, y: 16.148441, z: 10.605}
+  m_LocalPosition: {x: -15.5, y: 8, z: -42.54}
+  m_LocalScale: {x: 4, y: 16, z: 10}
   m_ConstrainProportionsScale: 0
   m_Children: []
   m_Father: {fileID: 589700682}
@@ -5082,9 +5082,13 @@ PrefabInstance:
       propertyPath: inventoryUI
       value: 
       objectReference: {fileID: 315332198}
+    - target: {fileID: 1934002761138129777, guid: 89e73578ec890cc42962270f7d45dc86, type: 3}
+      propertyPath: mantleEasing.easingType
+      value: 2
+      objectReference: {fileID: 0}
     - target: {fileID: 3717906627796027250, guid: 89e73578ec890cc42962270f7d45dc86, type: 3}
       propertyPath: field of view
-      value: 78
+      value: 75
       objectReference: {fileID: 0}
     - target: {fileID: 5106919921863684212, guid: 89e73578ec890cc42962270f7d45dc86, type: 3}
       propertyPath: m_Name

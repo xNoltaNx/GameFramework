@@ -124,6 +124,17 @@ namespace GameFramework.Character
             // interaction already set in ValidateComponents
         }
 
+        private void OnDestroy()
+        {
+            // Unsubscribe from events to prevent memory leaks
+            if (inputHandler != null && inventoryUI != null)
+            {
+                inputHandler.OnInventoryToggle -= inventoryUI.ToggleInventory;
+                inputHandler.OnHotbarSlotSelected -= inventoryUI.SelectHotbarSlot;
+                inputHandler.OnEquipmentCycle -= inventoryUI.CycleEquippedItems;
+            }
+        }
+
         private void InitializeComponents()
         {
             CharacterController characterController = GetComponent<CharacterController>();
@@ -137,6 +148,14 @@ namespace GameFramework.Character
             {
                 Transform cameraTransform = camera?.CameraTransform ?? transform;
                 locomotion.Initialize(characterController, cameraTransform);
+            }
+            
+            // Connect input events to UI systems
+            if (inputHandler != null && inventoryUI != null)
+            {
+                inputHandler.OnInventoryToggle += inventoryUI.ToggleInventory;
+                inputHandler.OnHotbarSlotSelected += inventoryUI.SelectHotbarSlot;
+                inputHandler.OnEquipmentCycle += inventoryUI.CycleEquippedItems;
             }
         }
 

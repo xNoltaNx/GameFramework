@@ -1240,7 +1240,7 @@ MonoBehaviour:
   mantleHeight: 1
   mantleReach: 1.5
   mantleDetectionHeight: 0.5
-  mantleDuration: 0.35
+  mantleDuration: 0.5
   minMantleVelocity: 1
   mantleLayers:
     serializedVersion: 2

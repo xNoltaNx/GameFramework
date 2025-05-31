@@ -72,7 +72,7 @@ MonoBehaviour:
     To: vcam_Airborne
     Blend:
       Style: 1
-      Time: 1
+      Time: 5
       CustomCurve:
         serializedVersion: 2
         m_Curve: []
