@@ -30,7 +30,7 @@ namespace GameFramework.Locomotion.States
             
             if (crouchHeld)
             {
-                if (sprintHeld && movementInput.magnitude > 0.1f && controller.CanSlide && CanInitiateSlide())
+                if (sprintHeld && movementInput.magnitude > controller.Config.MovementInputDeadzone && controller.CanSlide && CanInitiateSlide())
                 {
                     controller.ChangeToSlidingState(movementInput);
                 }
@@ -42,7 +42,7 @@ namespace GameFramework.Locomotion.States
             }
 
             float speed = sprintHeld ? controller.SprintSpeed : controller.WalkSpeed;
-            bool hasMovementInput = movementInput.magnitude > 0.1f;
+            bool hasMovementInput = movementInput.magnitude > controller.Config.MovementInputDeadzone;
             bool isCurrentlyMoving = hasMovementInput || controller.IsMoving; // Use input OR velocity
             bool isCurrentlySprinting = sprintHeld && hasMovementInput; // Sprint requires input
             
@@ -77,7 +77,7 @@ namespace GameFramework.Locomotion.States
             var cameraController = GetCameraController();
             if (cameraController != null)
             {
-                string stateName = this.GetType().Name.Replace("State", ""); // GetStateName()
+                string stateName = GetStateName();
                 
                 // Use intended movement speed based on state, not current velocity
                 // This prevents high sprint velocities from affecting walking head bob
@@ -91,16 +91,6 @@ namespace GameFramework.Locomotion.States
             }
         }
 
-        private ICameraController GetCameraController()
-        {
-            // Cache lookup - copy from base class
-            var cameraController = controller.GetComponent<ICameraController>();
-            if (cameraController == null)
-            {
-                cameraController = controller.GetComponentInChildren<ICameraController>();
-            }
-            return cameraController;
-        }
 
         public override void HandleJump(bool jumpPressed, bool jumpHeld)
         {
@@ -111,14 +101,5 @@ namespace GameFramework.Locomotion.States
             }
         }
 
-        private bool CanInitiateSlide()
-        {
-            // Check if player is moving at or above the required sprint speed threshold
-            Vector3 horizontalVelocity = new Vector3(controller.Velocity.x, 0f, controller.Velocity.z);
-            float currentSpeed = horizontalVelocity.magnitude;
-            float requiredSpeed = controller.SprintSpeed * controller.SlideSpeedThreshold;
-            
-            return currentSpeed >= requiredSpeed;
-        }
     }
 }

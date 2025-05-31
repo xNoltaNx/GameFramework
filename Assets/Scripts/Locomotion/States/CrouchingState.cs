@@ -33,7 +33,7 @@ namespace GameFramework.Locomotion.States
                 return;
             }
 
-            if (crouchHeld && sprintHeld && movementInput.magnitude > 0.1f && controller.CanSlide && CanInitiateSlide())
+            if (crouchHeld && sprintHeld && movementInput.magnitude > controller.Config.MovementInputDeadzone && controller.CanSlide && CanInitiateSlide())
             {
                 controller.ChangeToSlidingState(movementInput);
                 return;
@@ -49,7 +49,7 @@ namespace GameFramework.Locomotion.States
                 
                 if (currentSpeed > controller.CrouchSpeed)
                 {
-                    if (movementInput.magnitude < 0.1f)
+                    if (movementInput.magnitude < controller.Config.MovementInputDeadzone)
                     {
                         // No input - preserve momentum direction
                         targetVelocity = currentHorizontalVelocity.normalized * Mathf.Max(controller.CrouchSpeed, currentSpeed * 0.8f);
@@ -71,14 +71,5 @@ namespace GameFramework.Locomotion.States
         {
         }
 
-        private bool CanInitiateSlide()
-        {
-            // Check if player is moving at or above the required sprint speed threshold
-            Vector3 horizontalVelocity = new Vector3(controller.Velocity.x, 0f, controller.Velocity.z);
-            float currentSpeed = horizontalVelocity.magnitude;
-            float requiredSpeed = controller.SprintSpeed * controller.SlideSpeedThreshold;
-            
-            return currentSpeed >= requiredSpeed;
-        }
     }
 }

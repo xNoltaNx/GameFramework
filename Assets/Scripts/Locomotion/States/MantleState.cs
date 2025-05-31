@@ -35,7 +35,8 @@ namespace GameFramework.Locomotion.States
             
             // Create arc peak position - midpoint elevated above both start and target
             Vector3 midpoint = Vector3.Lerp(startPosition, targetPosition, 0.5f);
-            float arcHeight = Mathf.Max(1.5f, targetPosition.y - startPosition.y + 0.5f);
+            float heightDifference = targetPosition.y - startPosition.y;
+            float arcHeight = Mathf.Max(controller.Config.MantleArcHeightMultiplier, heightDifference + controller.Config.MantleArcMinHeight);
             peakPosition = new Vector3(midpoint.x, Mathf.Max(startPosition.y, targetPosition.y) + arcHeight, midpoint.z);
             
             mantleTimer = 0f;

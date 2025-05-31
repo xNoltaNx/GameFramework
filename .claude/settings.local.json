@@ -10,7 +10,8 @@
       "Bash(rm:*)",
       "Bash(rg:*)",
       "Bash(ls:*)",
-      "WebFetch(domain:docs.unity3d.com)"
+      "WebFetch(domain:docs.unity3d.com)",
+      "Bash(touch:*)"
     ],
     "deny": []
   },

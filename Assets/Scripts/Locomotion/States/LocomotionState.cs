@@ -55,11 +55,11 @@ namespace GameFramework.Locomotion.States
             cameraController?.NotifyLanding(landingVelocity);
         }
 
-        private static ICameraController cachedCameraController;
+        private ICameraController cachedCameraController;
         
-        private ICameraController GetCameraController()
+        protected ICameraController GetCameraController()
         {
-            // Cache the camera controller to avoid repeated lookups
+            // Instance-based cache to avoid cross-state contamination
             if (cachedCameraController == null)
             {
                 // First try to get from the controller itself
@@ -73,6 +73,11 @@ namespace GameFramework.Locomotion.States
             }
             
             return cachedCameraController;
+        }
+
+        public virtual void InvalidateCameraControllerCache()
+        {
+            cachedCameraController = null;
         }
 
         protected virtual string GetStateName()

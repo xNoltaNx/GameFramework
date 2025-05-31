@@ -711,15 +711,15 @@ namespace GameFramework.Camera.Editor
 
             var blendList = new System.Collections.Generic.List<CinemachineBlenderSettings.CustomBlend>();
 
-            // Define all the camera combinations and their blend times
+            // Define all the camera combinations and their blend times (using sensible defaults)
             var cameraMap = new System.Collections.Generic.Dictionary<string, (CinemachineCamera camera, float blendTime)>
             {
-                { "Standing", (standingCamera, profile.BlendSettings.toStanding) },
-                { "Walking", (walkingCamera, profile.BlendSettings.toWalking) },
-                { "Sprinting", (sprintingCamera, profile.BlendSettings.toSprinting) },
-                { "Crouching", (crouchingCamera, profile.BlendSettings.toCrouching) },
-                { "Sliding", (slidingCamera, profile.BlendSettings.toSliding) },
-                { "Airborne", (airborneCamera, profile.BlendSettings.toAirborne) }
+                { "Standing", (standingCamera, 0.6f) },    // Relaxed transition to standing
+                { "Walking", (walkingCamera, 0.4f) },      // Quick transition to walking
+                { "Sprinting", (sprintingCamera, 0.3f) },  // Fast transition to sprinting
+                { "Crouching", (crouchingCamera, 0.8f) },  // Slow transition to crouching
+                { "Sliding", (slidingCamera, 0.2f) },      // Very fast transition to sliding
+                { "Airborne", (airborneCamera, 0.15f) }    // Instant transition to airborne
             };
 
             // Create blend instructions for all camera transitions
@@ -735,7 +735,7 @@ namespace GameFramework.Camera.Editor
                         From = fromCamera.Value.camera.name,
                         To = toCamera.Value.camera.name,
                         Blend = new CinemachineBlendDefinition(
-                            profile.BlendSettings.blendStyle,
+                            CinemachineBlendDefinition.Styles.EaseInOut,  // Use sensible default
                             toCamera.Value.blendTime
                         )
                     };

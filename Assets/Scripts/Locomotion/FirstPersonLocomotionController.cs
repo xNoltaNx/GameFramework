@@ -78,15 +78,14 @@ namespace GameFramework.Locomotion
         private bool canSlide = true;
         
         private StateMachine<LocomotionState> stateMachine;
-        private StandingState standingState;
-        private CrouchingState crouchingState;
-        private SlidingState slidingState;
-        private JumpingState jumpingState;
-        private FallingState fallingState;
-        private MantleState mantleState;
+        private LocomotionStateFactory stateFactory;
+        private StateTransitionManager transitionManager;
+        
+        [Header("Configuration")]
+        [SerializeField] private LocomotionConfiguration locomotionConfig;
 
         public bool IsGrounded => characterController?.isGrounded ?? false;
-        public bool IsMoving => new Vector3(velocity.x, 0f, velocity.z).magnitude > 0.1f;
+        public bool IsMoving => new Vector3(velocity.x, 0f, velocity.z).magnitude > (locomotionConfig?.VelocityThreshold ?? 0.1f);
         public bool IsSprinting { get; set; }
         public bool IsCrouching => isCrouching;
         public bool IsSliding => stateMachine?.IsInState<SlidingState>() ?? false;
@@ -118,10 +117,14 @@ namespace GameFramework.Locomotion
         public float AirDrag => airDrag;
         public bool AllowAirDirectionChange => allowAirDirectionChange;
         public float DirectionChangeThreshold => directionChangeThreshold;
+        
+        // Configuration access
+        public LocomotionConfiguration Config => locomotionConfig;
 
         private void Awake()
         {
             ValidateReferences();
+            InitializeConfiguration();
             InitializeValues();
             InitializeStateMachine();
         }
@@ -157,25 +160,44 @@ namespace GameFramework.Locomotion
             }
         }
         
+        private void InitializeConfiguration()
+        {
+            if (locomotionConfig == null)
+            {
+                locomotionConfig = LocomotionConfiguration.CreateDefault();
+                Debug.LogWarning($"No LocomotionConfiguration assigned to {gameObject.name}. Using default configuration.");
+            }
+        }
+        
         private void InitializeStateMachine()
         {
-            stateMachine = new StateMachine<LocomotionState>();
-            
-            standingState = new StandingState(this);
-            crouchingState = new CrouchingState(this);
-            slidingState = new SlidingState(this);
-            jumpingState = new JumpingState(this);
-            fallingState = new FallingState(this);
-            mantleState = new MantleState(this);
-            
-            stateMachine.RegisterState(standingState);
-            stateMachine.RegisterState(crouchingState);
-            stateMachine.RegisterState(slidingState);
-            stateMachine.RegisterState(jumpingState);
-            stateMachine.RegisterState(fallingState);
-            stateMachine.RegisterState(mantleState);
-            
-            stateMachine.ChangeState(standingState);
+            try
+            {
+                stateMachine = new StateMachine<LocomotionState>();
+                stateFactory = new LocomotionStateFactory();
+                
+                // Initialize factory with this controller
+                stateFactory.InitializeStates(this);
+                
+                // Register all states with the state machine
+                stateMachine.RegisterState(stateFactory.GetState<StandingState>());
+                stateMachine.RegisterState(stateFactory.GetState<CrouchingState>());
+                stateMachine.RegisterState(stateFactory.GetState<SlidingState>());
+                stateMachine.RegisterState(stateFactory.GetState<JumpingState>());
+                stateMachine.RegisterState(stateFactory.GetState<FallingState>());
+                stateMachine.RegisterState(stateFactory.GetState<MantleState>());
+                
+                // Initialize transition manager
+                transitionManager = new StateTransitionManager(stateMachine, stateFactory, this, locomotionConfig);
+                
+                // Start in standing state
+                stateMachine.ChangeState(stateFactory.GetState<StandingState>());
+            }
+            catch (System.Exception ex)
+            {
+                Debug.LogError($"Failed to initialize state machine for {gameObject.name}: {ex.Message}");
+                enabled = false; // Disable the component if initialization fails
+            }
         }
 
         public void Initialize(CharacterController controller, Transform camera)
@@ -192,13 +214,20 @@ namespace GameFramework.Locomotion
 
         private void Update()
         {
-            // Skip crouch transitions during mantling to ensure atomic movement
-            if (!stateMachine.IsInState<MantleState>())
+            try
             {
-                HandleCrouchTransition();
+                // Skip crouch transitions during mantling to ensure atomic movement
+                if (!(transitionManager?.IsInState<MantleState>() ?? false))
+                {
+                    HandleCrouchTransition();
+                }
+                
+                stateMachine?.Update();
             }
-            
-            stateMachine?.Update();
+            catch (System.Exception ex)
+            {
+                Debug.LogError($"Error in LocomotionController Update for {gameObject.name}: {ex.Message}");
+            }
         }
 
 
@@ -220,54 +249,45 @@ namespace GameFramework.Locomotion
 
         public void ChangeToStandingState()
         {
-            stateMachine?.ChangeState<StandingState>();
+            transitionManager?.TryTransitionToState<StandingState>();
         }
         
         public void ChangeToCrouchingState()
         {
-            stateMachine?.ChangeState<CrouchingState>();
+            transitionManager?.TryTransitionToState<CrouchingState>();
         }
         
         public void ChangeToSlidingState(Vector2 movementInput)
         {
-            stateMachine?.ChangeState<SlidingState>();
-            slidingState?.StartSlide(movementInput);
-            canSlide = false;
+            if (transitionManager?.TryTransitionToSliding(movementInput) == true)
+            {
+                canSlide = false;
+            }
         }
         
         public void ChangeToJumpingState()
         {
-            stateMachine?.ChangeState<JumpingState>();
+            transitionManager?.TryTransitionToState<JumpingState>();
         }
         
         public void ChangeToFallingState()
         {
-            stateMachine?.ChangeState<FallingState>();
+            transitionManager?.TryTransitionToState<FallingState>();
         }
         
         public void ChangeToMantleState(Vector3 mantleTarget)
         {
-            stateMachine?.ChangeState<MantleState>();
-            mantleState?.StartMantle(mantleTarget);
+            transitionManager?.TryTransitionToMantle(mantleTarget);
         }
         
         public void ChangeToGroundedState()
         {
-            // Check input state to determine appropriate grounded state
             if (debugStateTransitions)
             {
                 Debug.Log($"Transitioning to grounded state. IsGrounded: {IsGrounded}, Velocity.y: {velocity.y}, IsCrouching: {isCrouching}");
             }
             
-            // If crouching was set during airborne movement, go to crouching state
-            if (isCrouching)
-            {
-                stateMachine?.ChangeState<CrouchingState>();
-            }
-            else
-            {
-                stateMachine?.ChangeState<StandingState>();
-            }
+            transitionManager?.TransitionToGroundedState();
         }
 
         private void HandleCrouchTransition()
@@ -341,7 +361,7 @@ namespace GameFramework.Locomotion
             Vector3 inputDirection = GetMovementDirection(movementInput);
             Vector3 currentHorizontalVelocity = new Vector3(velocity.x, 0f, velocity.z);
             
-            if (movementInput.magnitude > 0.1f)
+            if (movementInput.magnitude > locomotionConfig.AirControlMinInput)
             {
                 Vector3 targetVelocity = inputDirection * airMaxSpeed;
                 
@@ -397,7 +417,15 @@ namespace GameFramework.Locomotion
             }
             else
             {
-                currentHorizontalVelocity *= airDrag;
+                // Apply drag only if velocity is above threshold to prevent jitter
+                if (currentHorizontalVelocity.magnitude > locomotionConfig.AirDragThreshold)
+                {
+                    currentHorizontalVelocity *= airDrag;
+                }
+                else
+                {
+                    currentHorizontalVelocity = Vector3.zero;
+                }
             }
             
             velocity = new Vector3(currentHorizontalVelocity.x, velocity.y, currentHorizontalVelocity.z);
@@ -422,9 +450,20 @@ namespace GameFramework.Locomotion
         
         public void MoveCharacter()
         {
-            if (characterController != null)
+            try
             {
-                characterController.Move(velocity * Time.deltaTime);
+                if (characterController != null)
+                {
+                    characterController.Move(velocity * Time.deltaTime);
+                }
+                else
+                {
+                    Debug.LogWarning($"CharacterController is null on {gameObject.name}. Cannot move character.");
+                }
+            }
+            catch (System.Exception ex)
+            {
+                Debug.LogError($"Error moving character on {gameObject.name}: {ex.Message}");
             }
         }
 
@@ -520,7 +559,7 @@ namespace GameFramework.Locomotion
             if (isCrouching)
                 return false;
             
-            if (movementInput.magnitude < 0.1f)
+            if (movementInput.magnitude < locomotionConfig.MovementInputDeadzone)
                 return false;
                 
             Vector3 forwardVelocity = new Vector3(velocity.x, 0f, velocity.z);
@@ -552,10 +591,10 @@ namespace GameFramework.Locomotion
                 {
                     float mantleHeightCheck = ledgeHit.point.y - transform.position.y;
 
-                    if (mantleHeightCheck > 0.5f && mantleHeightCheck <= mantleHeight)
+                    if (mantleHeightCheck > locomotionConfig.MantleMinHeight && mantleHeightCheck <= mantleHeight)
                     {
                         // Ensure adequate clearance from ledge edge for safe landing
-                        float safeDistance = characterController.radius + 0.6f; // Increased clearance
+                        float safeDistance = characterController.radius + locomotionConfig.MantleSafeClearanceDistance;
                         Vector3 finalPosition = ledgeHit.point + moveDirection * safeDistance + Vector3.up * (characterController.height / 2f);
                         Vector3 capsuleBottom = finalPosition - Vector3.up * (characterController.height / 2f);
                         Vector3 capsuleTop = finalPosition + Vector3.up * (characterController.height / 2f);

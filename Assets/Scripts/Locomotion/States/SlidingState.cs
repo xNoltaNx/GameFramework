@@ -48,7 +48,7 @@ namespace GameFramework.Locomotion.States
             }
             
             // Only check grounded after a brief delay to allow slide to establish
-            if (slideTimer < controller.SlideDuration - 0.1f && !controller.IsGrounded)
+            if (slideTimer < controller.SlideDuration - controller.Config.SlideExitDelay && !controller.IsGrounded)
             {
                 controller.ChangeToFallingState();
                 return;
@@ -80,7 +80,7 @@ namespace GameFramework.Locomotion.States
             Vector3 currentHorizontalVelocity = new Vector3(controller.Velocity.x, 0f, controller.Velocity.z);
             Vector3 deceleratedVelocity = Vector3.Lerp(currentHorizontalVelocity, Vector3.zero, controller.SlideDeceleration * Time.deltaTime);
             
-            if (deceleratedVelocity.magnitude < controller.MinSlideSpeed && slideTimer > 0.1f)
+            if (deceleratedVelocity.magnitude < controller.MinSlideSpeed && slideTimer > controller.Config.SlideExitDelay)
             {
                 deceleratedVelocity = deceleratedVelocity.normalized * controller.MinSlideSpeed;
             }
