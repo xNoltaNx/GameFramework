@@ -1,0 +1,72 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 8585264a22e581540a5f72c1e9cbb0ae, type: 3}
+  m_Name: PickupItem_Template
+  m_EditorClassIdentifier: 
+  templateName: Pickup Item
+  description: "Complete pickup interaction: Player touches item \u2192 ItemCollected
+    event \u2192 UI updates, audio plays, item disappears."
+  templateIcon: {fileID: 0}
+  category: Items
+  difficulty: 1
+  triggerSettings:
+    triggerType: 0
+    collisionEvent: 0
+    triggerLayers:
+      serializedVersion: 2
+      m_Bits: 8
+    requiredTag: Player
+    requireRigidbody: 0
+    colliderType: 0
+    proximityEvent: 0
+    triggerDistance: 5
+    checkInterval: 0.1
+    use3DDistance: 1
+    targetMode: 1
+    targetTag: Player
+    timerDuration: 1
+    startOnAwake: 1
+    autoReset: 0
+  eventChannels:
+  - eventName: ItemCollected
+    description: Triggered when player picks up an item
+    createNewEvent: 1
+    existingEventPath: 
+    gameEventAsset: {fileID: 0}
+  conditions: []
+  requireAllConditions: 1
+  responseObjects:
+  - objectName: AudioFeedback
+    description: Plays pickup sound
+    createNewObject: 1
+    targetObjectId: 
+    targetGameObject: {fileID: 0}
+    listenToEvents:
+    - ItemCollected
+    actions:
+    - actionType: 0
+      executionDelay: 0
+      actionData: 
+  - objectName: ItemVisual
+    description: Deactivates the item visual
+    createNewObject: 0
+    targetObjectId: 
+    targetGameObject: {fileID: 0}
+    listenToEvents:
+    - ItemCollected
+    actions:
+    - actionType: 1
+      executionDelay: 0.1
+      actionData: 
+  canRepeat: 0
+  cooldownTime: 0
+  debugMode: 0

@@ -172,7 +172,7 @@ namespace GameFramework.Events.Editor
                 WizardStep.EventChannelSetup => new Color(0.3f, 0.7f, 0.9f, 0.05f), // Event (Blue)
                 WizardStep.ConditionSetup => new Color(0.9f, 0.7f, 0.3f, 0.05f),    // Action (Orange)
                 WizardStep.ResponseObjectSetup => new Color(0.3f, 0.9f, 0.4f, 0.05f), // ObjectControl (Green)
-                WizardStep.Review => new Color(0.9f, 0.3f, 0.3f, 0.05f),            // System (Red)
+                WizardStep.Review => new Color(0.9f, 0.3f, 0.3f, 0.00f),            // System (Red)
                 WizardStep.Complete => new Color(0.9f, 0.3f, 0.3f, 0.05f),          // System (Red)
                 _ => Color.gray
             };
@@ -187,7 +187,7 @@ namespace GameFramework.Events.Editor
                 WizardStep.EventChannelSetup => new Color(0.3f, 0.7f, 0.9f, 0.3f), // Event (Blue)
                 WizardStep.ConditionSetup => new Color(0.9f, 0.7f, 0.3f, 0.3f),    // Action (Orange)
                 WizardStep.ResponseObjectSetup => new Color(0.3f, 0.9f, 0.4f, 0.3f), // ObjectControl (Green)
-                WizardStep.Review => new Color(0.9f, 0.3f, 0.3f, 0.3f),            // System (Red)
+                WizardStep.Review => new Color(0.9f, 0.3f, 0.3f, 0.0f),            // System (Red)
                 WizardStep.Complete => new Color(0.9f, 0.3f, 0.3f, 0.3f),          // System (Red)
                 _ => Color.white
             };
@@ -202,7 +202,7 @@ namespace GameFramework.Events.Editor
             // Main title with wizard icon
             GUIStyle headerStyle = new GUIStyle(EditorStyles.boldLabel)
             {
-                fontSize = 18,
+                fontSize = 20, // Slightly larger for main title
                 alignment = TextAnchor.MiddleCenter
             };
 
@@ -342,26 +342,34 @@ namespace GameFramework.Events.Editor
                 // Get step-specific color based on CLGF themes
                 Color stepColor = stepColors[i];
                 
+                // Scale up current step button
+                float buttonWidth = isActive ? 140 : 75;
+                float buttonHeight = isActive ? 35 : 25;
+                
                 GUIStyle stepStyle = new GUIStyle(EditorStyles.miniButton)
                 {
-                    fixedWidth = 70,
-                    fixedHeight = 25,
+                    fixedWidth = buttonWidth,
+                    fixedHeight = buttonHeight,
                     normal = { textColor = isActive ? Color.white : (canNavigateTo ? Color.white : Color.gray) },
-                    fontStyle = isActive ? FontStyle.Bold : FontStyle.Normal
+                    fontStyle = isActive ? FontStyle.Bold : FontStyle.Normal,
+                    fontSize = isActive ? 16 : 12
                 };
                 
                 // Set background color based on step type and state
                 if (isActive)
                 {
-                    GUI.backgroundColor = stepColor;
+                    // Brighter version for selected step
+                    GUI.backgroundColor = Color.Lerp(stepColor, Color.white, 0.2f);
                 }
                 else if (isCompleted)
                 {
-                    GUI.backgroundColor = Color.Lerp(stepColor, Color.green, 0.3f);
+                    // Darker, more saturated version for completed steps
+                    GUI.backgroundColor = Color.Lerp(stepColor, Color.black, 0.2f);
                 }
                 else if (canNavigateTo)
                 {
-                    GUI.backgroundColor = Color.Lerp(stepColor, Color.white, 0.7f);
+                    // Darker, more saturated version for unpressed available steps
+                    GUI.backgroundColor = Color.Lerp(stepColor, Color.black, 0.3f);
                 }
                 else
                 {
@@ -392,16 +400,16 @@ namespace GameFramework.Events.Editor
         
         private Color[] GetStepColors()
         {
-            // Map each step to appropriate CLGF theme colors
+            // Map each step to vibrant CLGF theme colors
             return new Color[]
             {
-                new Color(0.9f, 0.3f, 0.3f, 0.8f), // Template - System (Red)
-                new Color(0.9f, 0.7f, 0.3f, 0.8f), // Trigger - Action (Orange) 
-                new Color(0.3f, 0.7f, 0.9f, 0.8f), // Events - Event (Blue)
-                new Color(0.9f, 0.7f, 0.3f, 0.8f), // Conditions - Action (Orange)
-                new Color(0.3f, 0.9f, 0.4f, 0.8f), // Responses - ObjectControl (Green)
-                new Color(0.9f, 0.3f, 0.3f, 0.8f), // Review - System (Red)
-                new Color(0.9f, 0.3f, 0.3f, 0.8f)  // Complete - System (Red)
+                new Color(1.0f, 0.3f, 0.2f, 0.9f), // Template - Vibrant System (Red)
+                new Color(1.0f, 0.6f, 0.1f, 0.9f), // Trigger - Vibrant Action (Orange) 
+                new Color(0.2f, 0.6f, 1.0f, 0.9f), // Events - Vibrant Event (Blue)
+                new Color(1.0f, 0.6f, 0.1f, 0.9f), // Conditions - Vibrant Action (Orange)
+                new Color(0.2f, 0.8f, 0.3f, 0.9f), // Responses - Vibrant ObjectControl (Green)
+                new Color(0.7f, 0.3f, 0.9f, 0.9f), // Review - Vibrant Character (Purple)
+                new Color(1.0f, 0.3f, 0.2f, 0.9f)  // Complete - Vibrant System (Red)
             };
         }
         
@@ -503,8 +511,14 @@ namespace GameFramework.Events.Editor
         
         private void DrawTemplateSelection()
         {
-            EditorGUILayout.LabelField("Template Selection", EditorStyles.boldLabel);
-            
+            GUIStyle titleStyle = new GUIStyle(EditorStyles.boldLabel)
+            {
+                fontSize = 16
+            };
+            EditorGUILayout.LabelField("📋 Template Selection", titleStyle);
+
+            EditorGUILayout.Space(10); // Extra buffer
+
             // Template mode toggle
             EditorGUILayout.BeginHorizontal();
             bool newUseTemplate = EditorGUILayout.Toggle("Use Template", useTemplate);
@@ -636,8 +650,14 @@ namespace GameFramework.Events.Editor
         
         private void DrawTriggerSetup()
         {
-            EditorGUILayout.LabelField("Trigger Configuration", EditorStyles.boldLabel);
+            GUIStyle titleStyle = new GUIStyle(EditorStyles.boldLabel)
+            {
+                fontSize = 16
+            };
+            EditorGUILayout.LabelField("⚡ Trigger Configuration", titleStyle);
             
+            EditorGUILayout.Space(10); // Extra buffer
+
             // Trigger object selection
             triggerObject = (GameObject)EditorGUILayout.ObjectField(
                 new GUIContent("Trigger GameObject", "The GameObject that will start the interaction (receives trigger components)"),
@@ -673,7 +693,11 @@ namespace GameFramework.Events.Editor
             EditorGUILayout.Space(10);
             
             // General settings
-            EditorGUILayout.LabelField("General Settings", EditorStyles.boldLabel);
+            GUIStyle subsectionStyle = new GUIStyle(EditorStyles.boldLabel)
+            {
+                fontSize = 14
+            };
+            EditorGUILayout.LabelField("⚙️ General Settings", subsectionStyle);
             canRepeat = EditorGUILayout.Toggle("Can Repeat", canRepeat);
             if (canRepeat)
             {
@@ -684,9 +708,15 @@ namespace GameFramework.Events.Editor
         
         private void DrawEventChannelSetup()
         {
-            EditorGUILayout.LabelField("Event Channel Configuration", EditorStyles.boldLabel);
+            GUIStyle titleStyle = new GUIStyle(EditorStyles.boldLabel)
+            {
+                fontSize = 16
+            };
+            EditorGUILayout.LabelField("📡 Event Channel Configuration", titleStyle);
             
-            EditorGUILayout.HelpBox("Event channels connect triggers to responses. When a trigger fires, it raises events that listeners respond to.", MessageType.Info);
+            EditorGUILayout.Space(10); // Extra buffer
+
+            DrawThemedHelpBox("Event channels connect triggers to responses. When a trigger fires, it raises events that listeners respond to.");
             
             // List existing event channels
             for (int i = 0; i < eventChannelConfigs.Count; i++)
@@ -694,8 +724,22 @@ namespace GameFramework.Events.Editor
                 EditorGUILayout.BeginVertical(GUI.skin.box);
                 
                 EditorGUILayout.BeginHorizontal();
-                EditorGUILayout.LabelField($"Event Channel {i + 1}", EditorStyles.boldLabel);
-                if (GUILayout.Button("Remove", GUILayout.Width(60)))
+                
+                // Create larger, more prominent header with event name
+                var eventConfig = eventChannelConfigs[i];
+                string eventDisplayName = GetEventChannelDisplayName(eventConfig);
+                string headerText = string.IsNullOrEmpty(eventDisplayName) ? 
+                    $"🔵 Event Channel {i + 1}" : 
+                    $"🔵 Event Channel {i + 1} - {eventDisplayName}";
+                
+                GUIStyle headerStyle = new GUIStyle(EditorStyles.boldLabel)
+                {
+                    fontSize = 15,
+                    fontStyle = FontStyle.Bold
+                };
+                
+                EditorGUILayout.LabelField(headerText, headerStyle);
+                if (GUILayout.Button("✕", GUILayout.Width(25)))
                 {
                     eventChannelConfigs.RemoveAt(i);
                     i--;
@@ -705,40 +749,141 @@ namespace GameFramework.Events.Editor
                 }
                 EditorGUILayout.EndHorizontal();
                 
-                eventChannelConfigs[i].eventName = EditorGUILayout.TextField("Event Name", eventChannelConfigs[i].eventName);
-                eventChannelConfigs[i].description = EditorGUILayout.TextField("Description", eventChannelConfigs[i].description);
-                eventChannelConfigs[i].createNewEvent = EditorGUILayout.Toggle("Create New Event", eventChannelConfigs[i].createNewEvent);
+                EditorGUILayout.Space(5);
                 
-                if (!eventChannelConfigs[i].createNewEvent)
-                {
-                    eventChannelConfigs[i].existingEventPath = EditorGUILayout.TextField("Existing Event Path", eventChannelConfigs[i].existingEventPath);
-                }
+                // Event selection mode
+                DrawEventSelectionMode(eventChannelConfigs[i]);
                 
                 EditorGUILayout.EndVertical();
+                EditorGUILayout.Space(5);
             }
             
             // Add event channel button
-            if (GUILayout.Button("Add Event Channel"))
+            if (GUILayout.Button("➕ Add Event Channel", GUILayout.Height(25)))
             {
                 eventChannelConfigs.Add(new EventChannelConfig());
             }
             
             if (eventChannelConfigs.Count == 0)
             {
-                EditorGUILayout.HelpBox("Add at least one event channel to connect triggers to responses.", MessageType.Warning);
+                DrawThemedHelpBox("Add at least one event channel to connect triggers to responses.");
+            }
+        }
+        
+        private void DrawEventSelectionMode(EventChannelConfig eventConfig)
+        {
+            // Simple mode selection
+            EditorGUILayout.BeginHorizontal();
+            EditorGUILayout.LabelField("Event Mode:", GUILayout.Width(80));
+            
+            if (GUILayout.Toggle(eventConfig.createNewEvent, "✨ Create New", EditorStyles.miniButtonLeft, GUILayout.Width(100)))
+            {
+                if (!eventConfig.createNewEvent)
+                {
+                    eventConfig.createNewEvent = true;
+                    eventConfig.gameEventAsset = null;
+                }
+            }
+            
+            if (GUILayout.Toggle(!eventConfig.createNewEvent, "📂 Use Existing", EditorStyles.miniButtonRight, GUILayout.Width(100)))
+            {
+                if (eventConfig.createNewEvent)
+                {
+                    eventConfig.createNewEvent = false;
+                }
+            }
+            
+            EditorGUILayout.EndHorizontal();
+            EditorGUILayout.Space(3);
+            
+            // Mode-specific UI
+            if (eventConfig.createNewEvent)
+            {
+                DrawCreateNewEventMode(eventConfig);
+            }
+            else
+            {
+                DrawUseExistingEventMode(eventConfig);
+            }
+        }
+        
+        private void DrawCreateNewEventMode(EventChannelConfig eventConfig)
+        {
+            EditorGUILayout.LabelField("✨ Creating New Event", EditorStyles.miniLabel);
+            eventConfig.eventName = EditorGUILayout.TextField("Event Name", eventConfig.eventName);
+            eventConfig.description = EditorGUILayout.TextField("Description", eventConfig.description);
+            
+            if (!string.IsNullOrEmpty(eventConfig.eventName))
+            {
+                string previewPath = GetEventAssetPath(eventConfig.eventName);
+                EditorGUILayout.LabelField("Will create at:", previewPath, EditorStyles.miniLabel);
+            }
+        }
+        
+        private void DrawUseExistingEventMode(EventChannelConfig eventConfig)
+        {
+            EditorGUILayout.LabelField("📂 Use Existing Event", EditorStyles.miniLabel);
+            
+            // Unity's ObjectField for GameEvent selection
+            GameEvent newGameEvent = (GameEvent)EditorGUILayout.ObjectField(
+                "GameEvent Asset", 
+                eventConfig.gameEventAsset, 
+                typeof(GameEvent), 
+                false);
+            
+            if (newGameEvent != eventConfig.gameEventAsset)
+            {
+                eventConfig.gameEventAsset = newGameEvent;
+                
+                // Auto-populate fields from selected asset
+                if (newGameEvent != null)
+                {
+                    eventConfig.eventName = newGameEvent.ChannelName;
+                    eventConfig.description = newGameEvent.Description;
+                    eventConfig.existingEventPath = AssetDatabase.GetAssetPath(newGameEvent);
+                }
+                else
+                {
+                    eventConfig.eventName = "";
+                    eventConfig.description = "";
+                    eventConfig.existingEventPath = "";
+                }
+            }
+            
+            // Show event info if selected
+            if (eventConfig.gameEventAsset != null)
+            {
+                EditorGUILayout.Space(3);
+                EditorGUILayout.BeginVertical(GUI.skin.box);
+                EditorGUILayout.LabelField("Selected Event Info:", EditorStyles.boldLabel);
+                EditorGUILayout.LabelField("Name:", eventConfig.gameEventAsset.ChannelName);
+                if (!string.IsNullOrEmpty(eventConfig.gameEventAsset.Description))
+                {
+                    EditorGUILayout.LabelField("Description:", eventConfig.gameEventAsset.Description, EditorStyles.wordWrappedLabel);
+                }
+                EditorGUILayout.LabelField("Path:", AssetDatabase.GetAssetPath(eventConfig.gameEventAsset), EditorStyles.miniLabel);
+                EditorGUILayout.EndVertical();
             }
         }
         
         private void DrawConditionSetup()
         {
-            EditorGUILayout.LabelField("Condition Setup (Optional)", EditorStyles.boldLabel);
+            GUIStyle titleStyle = new GUIStyle(EditorStyles.boldLabel)
+            {
+                fontSize = 16
+            };
+            EditorGUILayout.LabelField("🔍 Condition Setup (Optional)", titleStyle);
             
-            EditorGUILayout.HelpBox("Conditions allow you to add additional checks before the trigger fires. Leave empty to always trigger.", MessageType.Info);
+            EditorGUILayout.Space(10); // Extra buffer
+            
+            DrawThemedHelpBox("Conditions allow you to add additional checks before the trigger fires. Leave empty to always trigger.");
+            
+            EditorGUILayout.Space(10); // Extra buffer
             
             if (conditionConfigs.Count > 0)
             {
-                requireAllConditions = EditorGUILayout.Toggle("Require All Conditions", requireAllConditions);
-                EditorGUILayout.Space(5);
+                requireAllConditions = EditorGUILayout.Toggle("🔗 Require All Conditions", requireAllConditions);
+                EditorGUILayout.Space(8); // Better spacing
             }
             
             // List existing conditions
@@ -746,20 +891,23 @@ namespace GameFramework.Events.Editor
             {
                 EditorGUILayout.BeginHorizontal();
                 
-                conditionConfigs[i].conditionType = (ConditionType)EditorGUILayout.EnumPopup($"Condition {i + 1}", conditionConfigs[i].conditionType);
+                conditionConfigs[i].conditionType = (ConditionType)EditorGUILayout.EnumPopup($"🔍 Condition {i + 1}", conditionConfigs[i].conditionType);
                 conditionConfigs[i].invertResult = EditorGUILayout.Toggle("Invert", conditionConfigs[i].invertResult, GUILayout.Width(60));
                 
-                if (GUILayout.Button("Remove", GUILayout.Width(60)))
+                if (GUILayout.Button("✕", GUILayout.Width(25)))
                 {
                     conditionConfigs.RemoveAt(i);
                     i--;
                 }
                 
                 EditorGUILayout.EndHorizontal();
+                EditorGUILayout.Space(3); // Space between conditions
             }
             
+            EditorGUILayout.Space(5); // Buffer before add button
+            
             // Add condition button
-            if (GUILayout.Button("Add Condition"))
+            if (GUILayout.Button("➕ Add Condition", GUILayout.Height(25)))
             {
                 conditionConfigs.Add(new ConditionConfig());
             }
@@ -767,9 +915,17 @@ namespace GameFramework.Events.Editor
         
         private void DrawResponseObjectSetup()
         {
-            EditorGUILayout.LabelField("Response Object Configuration", EditorStyles.boldLabel);
+            GUIStyle titleStyle = new GUIStyle(EditorStyles.boldLabel)
+            {
+                fontSize = 16
+            };
+            EditorGUILayout.LabelField("🎬 Response Object Configuration", titleStyle);
             
-            EditorGUILayout.HelpBox("Response objects listen to events and perform actions. Create multiple objects for complex interactions.", MessageType.Info);
+            EditorGUILayout.Space(10); // Extra buffer
+
+            DrawThemedHelpBox("Response objects listen to events and perform actions. Create multiple objects for complex interactions.");
+            
+            EditorGUILayout.Space(10); // Extra buffer
             
             // List existing response objects
             for (int i = 0; i < responseObjectConfigs.Count; i++)
@@ -777,8 +933,22 @@ namespace GameFramework.Events.Editor
                 EditorGUILayout.BeginVertical(GUI.skin.box);
                 
                 EditorGUILayout.BeginHorizontal();
-                EditorGUILayout.LabelField($"Response Object {i + 1}", EditorStyles.boldLabel);
-                if (GUILayout.Button("Remove", GUILayout.Width(60)))
+                
+                // Create larger, more prominent header with object name
+                var responseConfig = responseObjectConfigs[i];
+                string objectDisplayName = GetResponseObjectDisplayName(responseConfig);
+                string headerText = string.IsNullOrEmpty(objectDisplayName) ? 
+                    $"🎬 Response Object {i + 1}" : 
+                    $"🎬 Response Object {i + 1} - {objectDisplayName}";
+                
+                GUIStyle headerStyle = new GUIStyle(EditorStyles.boldLabel)
+                {
+                    fontSize = 15,
+                    fontStyle = FontStyle.Bold
+                };
+                
+                EditorGUILayout.LabelField(headerText, headerStyle);
+                if (GUILayout.Button("✕", GUILayout.Width(25)))
                 {
                     responseObjectConfigs.RemoveAt(i);
                     i--;
@@ -788,202 +958,714 @@ namespace GameFramework.Events.Editor
                 }
                 EditorGUILayout.EndHorizontal();
                 
-                var responseConfig = responseObjectConfigs[i];
-                
-                responseConfig.objectName = EditorGUILayout.TextField("Object Name", responseConfig.objectName);
-                responseConfig.description = EditorGUILayout.TextField("Description", responseConfig.description);
-                responseConfig.createNewObject = EditorGUILayout.Toggle("Create New Object", responseConfig.createNewObject);
-                
-                if (!responseConfig.createNewObject)
-                {
-                    responseConfig.targetObjectId = EditorGUILayout.TextField("Target Object ID", responseConfig.targetObjectId);
-                }
-                
                 EditorGUILayout.Space(5);
-                EditorGUILayout.LabelField("Events to Listen For", EditorStyles.boldLabel);
+                
+                // Object selection mode
+                DrawResponseObjectSelectionMode(responseConfig);
+                
+                EditorGUILayout.Space(8); // Buffer between sections
                 
                 // Event subscriptions
-                for (int j = 0; j < responseConfig.listenToEvents.Count; j++)
-                {
-                    EditorGUILayout.BeginHorizontal();
-                    
-                    // Show available event names from eventChannelConfigs
-                    if (eventChannelConfigs.Count > 0)
-                    {
-                        var eventNames = eventChannelConfigs.ConvertAll(e => e.eventName).ToArray();
-                        int currentIndex = Array.IndexOf(eventNames, responseConfig.listenToEvents[j]);
-                        if (currentIndex < 0) currentIndex = 0;
-                        
-                        int newIndex = EditorGUILayout.Popup($"Event {j + 1}", currentIndex, eventNames);
-                        if (newIndex >= 0 && newIndex < eventNames.Length)
-                        {
-                            responseConfig.listenToEvents[j] = eventNames[newIndex];
-                        }
-                    }
-                    else
-                    {
-                        responseConfig.listenToEvents[j] = EditorGUILayout.TextField($"Event {j + 1}", responseConfig.listenToEvents[j]);
-                    }
-                    
-                    if (GUILayout.Button("Remove", GUILayout.Width(60)))
-                    {
-                        responseConfig.listenToEvents.RemoveAt(j);
-                        j--;
-                    }
-                    
-                    EditorGUILayout.EndHorizontal();
-                }
+                DrawEventSubscriptions(responseConfig);
                 
-                if (GUILayout.Button("Add Event Listener"))
-                {
-                    responseConfig.listenToEvents.Add(eventChannelConfigs.Count > 0 ? eventChannelConfigs[0].eventName : "");
-                }
+                EditorGUILayout.Space(8); // Buffer between sections
                 
-                EditorGUILayout.Space(5);
-                EditorGUILayout.LabelField("Actions", EditorStyles.boldLabel);
-                
-                // Actions for this response object
-                for (int j = 0; j < responseConfig.actions.Count; j++)
-                {
-                    EditorGUILayout.BeginHorizontal();
-                    
-                    responseConfig.actions[j].actionType = (ActionType)EditorGUILayout.EnumPopup($"Action {j + 1}", responseConfig.actions[j].actionType);
-                    responseConfig.actions[j].executionDelay = EditorGUILayout.FloatField("Delay", responseConfig.actions[j].executionDelay, GUILayout.Width(80));
-                    
-                    if (GUILayout.Button("Remove", GUILayout.Width(60)))
-                    {
-                        responseConfig.actions.RemoveAt(j);
-                        j--;
-                    }
-                    
-                    EditorGUILayout.EndHorizontal();
-                }
-                
-                if (GUILayout.Button("Add Action"))
-                {
-                    responseConfig.actions.Add(new ActionConfig());
-                }
+                // Actions
+                DrawResponseActions(responseConfig);
                 
                 EditorGUILayout.EndVertical();
+                EditorGUILayout.Space(8); // Buffer between response objects
             }
             
             // Add response object button
-            if (GUILayout.Button("Add Response Object"))
+            if (GUILayout.Button("➕ Add Response Object", GUILayout.Height(25)))
             {
                 responseObjectConfigs.Add(new ResponseObjectConfig());
             }
             
             if (responseObjectConfigs.Count == 0)
             {
-                EditorGUILayout.HelpBox("Add at least one response object to complete the interaction.", MessageType.Warning);
+                DrawThemedHelpBox("Add at least one response object to complete the interaction.");
+            }
+        }
+        
+        private void DrawResponseObjectSelectionMode(ResponseObjectConfig responseConfig)
+        {
+            // Simple mode selection
+            EditorGUILayout.BeginHorizontal();
+            EditorGUILayout.LabelField("Object Mode:", GUILayout.Width(80));
+            
+            if (GUILayout.Toggle(responseConfig.createNewObject, "✨ Create New", EditorStyles.miniButtonLeft, GUILayout.Width(100)))
+            {
+                if (!responseConfig.createNewObject)
+                {
+                    responseConfig.createNewObject = true;
+                    responseConfig.targetGameObject = null;
+                }
+            }
+            
+            if (GUILayout.Toggle(!responseConfig.createNewObject, "📂 Use Existing", EditorStyles.miniButtonRight, GUILayout.Width(100)))
+            {
+                if (responseConfig.createNewObject)
+                {
+                    responseConfig.createNewObject = false;
+                }
+            }
+            
+            EditorGUILayout.EndHorizontal();
+            EditorGUILayout.Space(3);
+            
+            // Mode-specific UI
+            if (responseConfig.createNewObject)
+            {
+                DrawCreateNewObjectMode(responseConfig);
+            }
+            else
+            {
+                DrawUseExistingObjectMode(responseConfig);
+            }
+        }
+        
+        private void DrawCreateNewObjectMode(ResponseObjectConfig responseConfig)
+        {
+            EditorGUILayout.LabelField("✨ Creating New GameObject", EditorStyles.miniLabel);
+            responseConfig.objectName = EditorGUILayout.TextField("Object Name", responseConfig.objectName);
+            responseConfig.description = EditorGUILayout.TextField("Description", responseConfig.description);
+            
+            if (!string.IsNullOrEmpty(responseConfig.objectName))
+            {
+                EditorGUILayout.LabelField("Will create new GameObject in scene", EditorStyles.miniLabel);
+            }
+        }
+        
+        private void DrawUseExistingObjectMode(ResponseObjectConfig responseConfig)
+        {
+            EditorGUILayout.LabelField("📂 Use Existing GameObject", EditorStyles.miniLabel);
+            
+            // Unity's ObjectField for GameObject selection
+            GameObject newTargetObject = (GameObject)EditorGUILayout.ObjectField(
+                "Target GameObject", 
+                responseConfig.targetGameObject, 
+                typeof(GameObject), 
+                true); // Allow scene objects
+            
+            if (newTargetObject != responseConfig.targetGameObject)
+            {
+                responseConfig.targetGameObject = newTargetObject;
+                
+                // Auto-populate fields from selected object
+                if (newTargetObject != null)
+                {
+                    responseConfig.objectName = newTargetObject.name;
+                    responseConfig.targetObjectId = newTargetObject.name; // Legacy compatibility
+                }
+                else
+                {
+                    responseConfig.objectName = "";
+                    responseConfig.targetObjectId = "";
+                }
+            }
+            
+            // Show object info if selected
+            if (responseConfig.targetGameObject != null)
+            {
+                EditorGUILayout.Space(3);
+                EditorGUILayout.BeginVertical(GUI.skin.box);
+                EditorGUILayout.LabelField("Selected GameObject Info:", EditorStyles.boldLabel);
+                EditorGUILayout.LabelField("Name:", responseConfig.targetGameObject.name);
+                EditorGUILayout.LabelField("Scene:", responseConfig.targetGameObject.scene.name);
+                
+                // Show existing components
+                var components = responseConfig.targetGameObject.GetComponents<Component>();
+                if (components.Length > 1) // Ignore Transform
+                {
+                    EditorGUILayout.LabelField("Components:", EditorStyles.miniLabel);
+                    foreach (var comp in components)
+                    {
+                        if (comp != null && !(comp is Transform))
+                        {
+                            EditorGUILayout.LabelField($"  • {comp.GetType().Name}", EditorStyles.miniLabel);
+                        }
+                    }
+                }
+                
+                EditorGUILayout.EndVertical();
+            }
+        }
+        
+        private void DrawEventSubscriptions(ResponseObjectConfig responseConfig)
+        {
+            GUIStyle subsectionStyle = new GUIStyle(EditorStyles.boldLabel)
+            {
+                fontSize = 14
+            };
+            EditorGUILayout.LabelField("📡 Events to Listen For", subsectionStyle);
+            
+            // Event subscriptions
+            for (int j = 0; j < responseConfig.listenToEvents.Count; j++)
+            {
+                EditorGUILayout.BeginHorizontal();
+                
+                // Show available event names from eventChannelConfigs
+                if (eventChannelConfigs.Count > 0)
+                {
+                    var eventNames = eventChannelConfigs.ConvertAll(e => e.eventName).ToArray();
+                    int currentIndex = Array.IndexOf(eventNames, responseConfig.listenToEvents[j]);
+                    if (currentIndex < 0) currentIndex = 0;
+                    
+                    int newIndex = EditorGUILayout.Popup($"🔵 Event {j + 1}", currentIndex, eventNames);
+                    if (newIndex >= 0 && newIndex < eventNames.Length)
+                    {
+                        responseConfig.listenToEvents[j] = eventNames[newIndex];
+                    }
+                }
+                else
+                {
+                    responseConfig.listenToEvents[j] = EditorGUILayout.TextField($"🔵 Event {j + 1}", responseConfig.listenToEvents[j]);
+                }
+                
+                if (GUILayout.Button("✕", GUILayout.Width(25)))
+                {
+                    responseConfig.listenToEvents.RemoveAt(j);
+                    j--;
+                }
+                
+                EditorGUILayout.EndHorizontal();
+            }
+            
+            if (GUILayout.Button("➕ Add Event Listener", GUILayout.Height(20)))
+            {
+                responseConfig.listenToEvents.Add(eventChannelConfigs.Count > 0 ? eventChannelConfigs[0].eventName : "");
+            }
+        }
+        
+        private void DrawResponseActions(ResponseObjectConfig responseConfig)
+        {
+            GUIStyle subsectionStyle = new GUIStyle(EditorStyles.boldLabel)
+            {
+                fontSize = 14
+            };
+            EditorGUILayout.LabelField("🎬 Actions", subsectionStyle);
+            
+            // Actions for this response object
+            for (int j = 0; j < responseConfig.actions.Count; j++)
+            {
+                EditorGUILayout.BeginHorizontal();
+                
+                // Get action-specific icon
+                string actionIcon = GetActionIcon(responseConfig.actions[j].actionType);
+                
+                responseConfig.actions[j].actionType = (ActionType)EditorGUILayout.EnumPopup($"{actionIcon} Action {j + 1}", responseConfig.actions[j].actionType);
+                responseConfig.actions[j].executionDelay = EditorGUILayout.FloatField("Delay", responseConfig.actions[j].executionDelay, GUILayout.Width(80));
+                
+                if (GUILayout.Button("✕", GUILayout.Width(25)))
+                {
+                    responseConfig.actions.RemoveAt(j);
+                    j--;
+                }
+                
+                EditorGUILayout.EndHorizontal();
+            }
+            
+            if (GUILayout.Button("➕ Add Action", GUILayout.Height(20)))
+            {
+                responseConfig.actions.Add(new ActionConfig());
+            }
+        }
+        
+        private string GetActionIcon(ActionType actionType)
+        {
+            // Return larger icons (2x size effect through font styling)
+            return actionType switch
+            {
+                ActionType.AudioAction => "🔊",              // Sound/Audio
+                ActionType.GameObjectActivateAction => "👁️",  // Visibility toggle  
+                ActionType.InstantiateAction => "✨",         // Create/Spawn
+                ActionType.DestroyAction => "💥",             // Destruction
+                ActionType.ComponentToggleAction => "🔧",     // Component control
+                ActionType.MoveAction => "📐",                // Movement/Position
+                ActionType.RotateAction => "🔄",              // Rotation
+                ActionType.ScaleAction => "📏",               // Scale/Size
+                ActionType.MaterialPropertyAction => "🎨",    // Material/Appearance
+                ActionType.LightAction => "💡",              // Lighting
+                ActionType.ParticleAction => "✨",            // Particle effects
+                ActionType.PhysicsAction => "⚽",             // Physics
+                ActionType.AnimationAction => "🎬",           // Animation
+                ActionType.RaiseGameEventAction => "📡",      // Event broadcasting
+                ActionType.Custom => "🔧",                   // Custom/Generic
+                _ => "🎯"                                     // Default fallback
+            };
+        }
+        
+        private string GetResponseObjectDisplayName(ResponseObjectConfig responseConfig)
+        {
+            // Priority order: targetGameObject.name > objectName > targetObjectId
+            if (responseConfig.targetGameObject != null)
+            {
+                return responseConfig.targetGameObject.name;
+            }
+            else if (!string.IsNullOrEmpty(responseConfig.objectName))
+            {
+                return responseConfig.objectName;
+            }
+            else if (!string.IsNullOrEmpty(responseConfig.targetObjectId))
+            {
+                return responseConfig.targetObjectId;
+            }
+            
+            return ""; // No name available
+        }
+        
+        private string GetEventChannelDisplayName(EventChannelConfig eventConfig)
+        {
+            // Priority order: gameEventAsset.ChannelName > eventName
+            if (eventConfig.gameEventAsset != null)
+            {
+                return eventConfig.gameEventAsset.ChannelName;
+            }
+            else if (!string.IsNullOrEmpty(eventConfig.eventName))
+            {
+                return eventConfig.eventName;
+            }
+            
+            return ""; // No name available
+        }
+        
+        // CLGF Theme enum for consistency with the base editor
+        private enum CLGFTheme
+        {
+            Event,          // Blue theme for listeners, channels, event components
+            Action,         // Orange theme for event-raising actions and triggers  
+            ObjectControl,  // Green theme for actions that control other GameObjects
+            Character,      // Purple theme for character and player components
+            Camera,         // Teal theme for camera and view components
+            UI,             // Pink theme for UI and inventory components
+            System          // Red theme for managers and core systems
+        }
+        
+        private (Color backgroundColor, Color borderColor) GetCLGFThemeColors(CLGFTheme theme)
+        {
+            return theme switch
+            {
+                // Vibrant blue - bright and appealing
+                CLGFTheme.Event => (new Color(0.2f, 0.6f, 1.0f, 0.15f), new Color(0.1f, 0.5f, 0.95f, 0.8f)),
+                
+                // Vibrant orange - warm and energetic  
+                CLGFTheme.Action => (new Color(1.0f, 0.6f, 0.1f, 0.15f), new Color(0.95f, 0.5f, 0.0f, 0.8f)),
+                
+                // Vibrant green - fresh and lively
+                CLGFTheme.ObjectControl => (new Color(0.2f, 0.8f, 0.3f, 0.15f), new Color(0.1f, 0.7f, 0.2f, 0.8f)),
+                
+                // Vibrant purple - rich and elegant
+                CLGFTheme.Character => (new Color(0.7f, 0.3f, 0.9f, 0.15f), new Color(0.6f, 0.2f, 0.8f, 0.8f)),
+                
+                // Vibrant teal - modern and sophisticated
+                CLGFTheme.Camera => (new Color(0.2f, 0.8f, 0.7f, 0.15f), new Color(0.1f, 0.7f, 0.6f, 0.8f)),
+                
+                // Vibrant pink - playful and attractive
+                CLGFTheme.UI => (new Color(1.0f, 0.4f, 0.6f, 0.15f), new Color(0.9f, 0.3f, 0.5f, 0.8f)),
+                
+                // Vibrant red - bold and attention-grabbing
+                CLGFTheme.System => (new Color(1.0f, 0.3f, 0.2f, 0.15f), new Color(0.9f, 0.2f, 0.1f, 0.8f)),
+                
+                _ => (Color.gray, Color.white)
+            };
+        }
+        
+        private void DrawColoredReviewSection(string title, CLGFTheme theme, System.Action drawContent)
+        {
+            GUIStyle subsectionStyle = new GUIStyle(EditorStyles.boldLabel)
+            {
+                fontSize = 14
+            };
+            
+            // Get theme colors from CLGF
+            var (backgroundColor, borderColor) = GetCLGFThemeColors(theme);
+            
+            // Draw title outside the colored area
+            EditorGUILayout.LabelField(title, subsectionStyle);
+            EditorGUILayout.Space(3);
+            
+            // Begin the colored section with proper background handling
+            Rect sectionStart = GUILayoutUtility.GetRect(0, 0);
+            
+            EditorGUILayout.BeginVertical(GUI.skin.box);
+            EditorGUILayout.Space(8);
+            
+            // Draw content with consistent indentation
+            EditorGUILayout.BeginHorizontal();
+            GUILayout.Space(8);
+            EditorGUILayout.BeginVertical();
+            
+            drawContent();
+            
+            EditorGUILayout.EndVertical();
+            GUILayout.Space(8);
+            EditorGUILayout.EndHorizontal();
+            
+            EditorGUILayout.Space(8);
+            EditorGUILayout.EndVertical();
+            
+            // Draw colored background on top of the box
+            if (Event.current.type == EventType.Repaint)
+            {
+                Rect sectionEnd = GUILayoutUtility.GetLastRect();
+                Rect backgroundRect = new Rect(
+                    sectionEnd.x,
+                    sectionStart.y,
+                    sectionEnd.width,
+                    sectionEnd.height + (sectionEnd.y - sectionStart.y)
+                );
+                
+                // Draw semi-transparent background over the box
+                EditorGUI.DrawRect(backgroundRect, backgroundColor);
+                
+                // Draw colored border
+                float borderWidth = 2f;
+                EditorGUI.DrawRect(new Rect(backgroundRect.x, backgroundRect.y, backgroundRect.width, borderWidth), borderColor);
+                EditorGUI.DrawRect(new Rect(backgroundRect.x, backgroundRect.y + backgroundRect.height - borderWidth, backgroundRect.width, borderWidth), borderColor);
+                EditorGUI.DrawRect(new Rect(backgroundRect.x, backgroundRect.y, borderWidth, backgroundRect.height), borderColor);
+                EditorGUI.DrawRect(new Rect(backgroundRect.x + backgroundRect.width - borderWidth, backgroundRect.y, borderWidth, backgroundRect.height), borderColor);
             }
         }
         
         
         private void DrawReview()
         {
-            EditorGUILayout.LabelField("Complete Interaction Review", EditorStyles.boldLabel);
-            
-            EditorGUILayout.HelpBox("Review your complete interaction system below. Click 'Apply Setup' to create all components and event connections.", MessageType.Info);
-            
-            // Trigger object
-            EditorGUILayout.LabelField("Trigger GameObject:", EditorStyles.boldLabel);
-            EditorGUILayout.LabelField(triggerObject ? triggerObject.name : "None");
-            
-            EditorGUILayout.Space(5);
-            
-            // Trigger configuration
-            EditorGUILayout.LabelField("Trigger Configuration:", EditorStyles.boldLabel);
-            EditorGUILayout.LabelField($"Type: {triggerConfig.triggerType}");
-            EditorGUILayout.LabelField($"Can Repeat: {canRepeat}");
-            if (canRepeat && cooldownTime > 0)
+            GUIStyle titleStyle = new GUIStyle(EditorStyles.boldLabel)
             {
-                EditorGUILayout.LabelField($"Cooldown: {cooldownTime}s");
-            }
-            
-            EditorGUILayout.Space(5);
-            
-            // Event channels
-            EditorGUILayout.LabelField("Event Channels:", EditorStyles.boldLabel);
-            if (eventChannelConfigs.Count == 0)
-            {
-                EditorGUILayout.LabelField("None");
-            }
-            else
-            {
-                foreach (var eventConfig in eventChannelConfigs)
-                {
-                    EditorGUILayout.LabelField($"• {eventConfig.eventName} ({(eventConfig.createNewEvent ? "new" : "existing")})");
-                }
-            }
-            
-            EditorGUILayout.Space(5);
-            
-            // Conditions
-            EditorGUILayout.LabelField("Conditions:", EditorStyles.boldLabel);
-            if (conditionConfigs.Count == 0)
-            {
-                EditorGUILayout.LabelField("None (always trigger)");
-            }
-            else
-            {
-                EditorGUILayout.LabelField($"{conditionConfigs.Count} condition(s) - {(requireAllConditions ? "All must be met" : "Any can be met")}");
-            }
-            
-            EditorGUILayout.Space(5);
-            
-            // Response objects
-            EditorGUILayout.LabelField("Response Objects:", EditorStyles.boldLabel);
-            if (responseObjectConfigs.Count == 0)
-            {
-                EditorGUILayout.LabelField("None");
-            }
-            else
-            {
-                foreach (var responseConfig in responseObjectConfigs)
-                {
-                    EditorGUILayout.LabelField($"• {responseConfig.objectName} ({(responseConfig.createNewObject ? "new" : "existing")})");
-                    foreach (var eventName in responseConfig.listenToEvents)
-                    {
-                        EditorGUILayout.LabelField($"  → Listens to: {eventName}");
-                    }
-                    foreach (var action in responseConfig.actions)
-                    {
-                        EditorGUILayout.LabelField($"  → Action: {action.actionType}" + (action.executionDelay > 0 ? $" (delay: {action.executionDelay}s)" : ""));
-                    }
-                }
-            }
+                fontSize = 16
+            };
+            EditorGUILayout.LabelField("📝 Complete Interaction Review", titleStyle);
             
             EditorGUILayout.Space(10);
             
-            // Interaction flow visualization
-            EditorGUILayout.LabelField("Interaction Flow:", EditorStyles.boldLabel);
-            EditorGUILayout.BeginVertical(GUI.skin.box);
+            EditorGUILayout.HelpBox("Review your complete interaction system below. Click 'Apply Setup' to create all components and event connections.", MessageType.Info);
             
-            EditorGUILayout.LabelField($"1. {triggerConfig.triggerType} trigger on '{(triggerObject ? triggerObject.name : "TriggerObject")}'");
+            EditorGUILayout.Space(10);
             
-            if (conditionConfigs.Count > 0)
+            // *** INTERACTION FLOW AT THE TOP - FLASHY VERSION ***
+            DrawFlashyInteractionFlow();
+            
+            EditorGUILayout.Space(15);
+            
+            // Trigger object & configuration
+            DrawColoredReviewSection("⚡ Trigger GameObject:", CLGFTheme.Action, () => {
+                EditorGUILayout.LabelField(triggerObject ? triggerObject.name : "None");
+            });
+            
+            EditorGUILayout.Space(8);
+            
+            DrawColoredReviewSection("⚙️ Trigger Configuration:", CLGFTheme.Action, () => {
+                EditorGUILayout.LabelField($"Type: {triggerConfig.triggerType}");
+                
+                // Show collision type for collision triggers
+                if (triggerConfig.triggerType == TriggerType.Collision)
+                {
+                    EditorGUILayout.LabelField($"Collider: {triggerConfig.colliderType}");
+                }
+                
+                EditorGUILayout.LabelField($"Can Repeat: {canRepeat}");
+                if (canRepeat && cooldownTime > 0)
+                {
+                    EditorGUILayout.LabelField($"Cooldown: {cooldownTime}s");
+                }
+            });
+            
+            EditorGUILayout.Space(8);
+            
+            // Event channels
+            DrawColoredReviewSection("📡 Event Channels:", CLGFTheme.Event, () => {
+                if (eventChannelConfigs.Count == 0)
+                {
+                    EditorGUILayout.LabelField("None");
+                }
+                else
+                {
+                    foreach (var eventConfig in eventChannelConfigs)
+                    {
+                        EditorGUILayout.LabelField($"• {eventConfig.eventName} ({(eventConfig.createNewEvent ? "new" : "existing")})");
+                    }
+                }
+            });
+            
+            EditorGUILayout.Space(8);
+            
+            // Conditions
+            DrawColoredReviewSection("🔍 Conditions:", CLGFTheme.Action, () => {
+                if (conditionConfigs.Count == 0)
+                {
+                    EditorGUILayout.LabelField("None (always trigger)");
+                }
+                else
+                {
+                    EditorGUILayout.LabelField($"{conditionConfigs.Count} condition(s) - {(requireAllConditions ? "All must be met" : "Any can be met")}");
+                }
+            });
+            
+            EditorGUILayout.Space(8);
+            
+            // Response objects
+            DrawColoredReviewSection("🎬 Response Objects:", CLGFTheme.ObjectControl, () => {
+                if (responseObjectConfigs.Count == 0)
+                {
+                    EditorGUILayout.LabelField("None");
+                }
+                else
+                {
+                    foreach (var responseConfig in responseObjectConfigs)
+                    {
+                        EditorGUILayout.LabelField($"• {responseConfig.objectName} ({(responseConfig.createNewObject ? "new" : "existing")})");
+                        foreach (var eventName in responseConfig.listenToEvents)
+                        {
+                            EditorGUILayout.LabelField($"  → Listens to: {eventName}");
+                        }
+                        foreach (var action in responseConfig.actions)
+                        {
+                            EditorGUILayout.LabelField($"  → Action: {action.actionType}" + (action.executionDelay > 0 ? $" (delay: {action.executionDelay}s)" : ""));
+                        }
+                    }
+                }
+            });
+        }
+        
+        private void DrawFlashyInteractionFlow()
+        {
+            // Create an eye-catching title
+            GUIStyle flowTitleStyle = new GUIStyle(EditorStyles.boldLabel)
             {
-                EditorGUILayout.LabelField($"2. Check {conditionConfigs.Count} condition(s)");
+                fontSize = 18,
+                fontStyle = FontStyle.Bold,
+                alignment = TextAnchor.MiddleLeft
+            };
+            
+            EditorGUILayout.LabelField("🔄 INTERACTION FLOW DIAGRAM", flowTitleStyle);
+            EditorGUILayout.Space(8);
+            
+            // Create the flow container with blue background styling
+            var (backgroundColor, borderColor) = GetCLGFThemeColors(CLGFTheme.Event); // Blue theme
+            backgroundColor.a = 0.15f; // More prominent blue background
+            borderColor.a = 0.9f;
+            
+            Rect sectionStart = GUILayoutUtility.GetRect(0, 0);
+            
+            EditorGUILayout.BeginVertical(GUI.skin.box);
+            EditorGUILayout.Space(12);
+            
+            // Build the flow steps dynamically with proper numbering
+            var flowSteps = BuildInteractionFlowSteps();
+            
+            for (int i = 0; i < flowSteps.Count; i++)
+            {
+                var step = flowSteps[i];
+                DrawFlowStep(step.stepNumber, step.icon, step.description, step.theme, step.details, step.isIndented);
+                
+                // Add flow arrow between steps (except after last step)
+                if (i < flowSteps.Count - 1)
+                {
+                    DrawFlowArrow(step.isIndented, flowSteps[i + 1].isIndented);
+                }
             }
             
+            EditorGUILayout.Space(12);
+            EditorGUILayout.EndVertical();
+            
+            // Draw enhanced background
+            if (Event.current.type == EventType.Repaint)
+            {
+                Rect sectionEnd = GUILayoutUtility.GetLastRect();
+                Rect backgroundRect = new Rect(
+                    sectionEnd.x,
+                    sectionStart.y,
+                    sectionEnd.width,
+                    sectionEnd.height + (sectionEnd.y - sectionStart.y)
+                );
+                
+                // Draw gradient-like effect with multiple layers
+                EditorGUI.DrawRect(backgroundRect, backgroundColor);
+                
+                // Enhanced border with glow effect
+                float borderWidth = 3f;
+                EditorGUI.DrawRect(new Rect(backgroundRect.x, backgroundRect.y, backgroundRect.width, borderWidth), borderColor);
+                EditorGUI.DrawRect(new Rect(backgroundRect.x, backgroundRect.y + backgroundRect.height - borderWidth, backgroundRect.width, borderWidth), borderColor);
+                EditorGUI.DrawRect(new Rect(backgroundRect.x, backgroundRect.y, borderWidth, backgroundRect.height), borderColor);
+                EditorGUI.DrawRect(new Rect(backgroundRect.x + backgroundRect.width - borderWidth, backgroundRect.y, borderWidth, backgroundRect.height), borderColor);
+                
+                // Inner glow
+                Color glowColor = borderColor;
+                glowColor.a = 0.3f;
+                EditorGUI.DrawRect(new Rect(backgroundRect.x + borderWidth, backgroundRect.y + borderWidth, backgroundRect.width - borderWidth * 2, borderWidth), glowColor);
+                EditorGUI.DrawRect(new Rect(backgroundRect.x + borderWidth, backgroundRect.y + backgroundRect.height - borderWidth * 2, backgroundRect.width - borderWidth * 2, borderWidth), glowColor);
+                EditorGUI.DrawRect(new Rect(backgroundRect.x + borderWidth, backgroundRect.y + borderWidth, borderWidth, backgroundRect.height - borderWidth * 2), glowColor);
+                EditorGUI.DrawRect(new Rect(backgroundRect.x + backgroundRect.width - borderWidth * 2, backgroundRect.y + borderWidth, borderWidth, backgroundRect.height - borderWidth * 2), glowColor);
+            }
+        }
+        
+        private System.Collections.Generic.List<(int stepNumber, string icon, string description, CLGFTheme theme, string[] details, bool isIndented)> BuildInteractionFlowSteps()
+        {
+            var steps = new System.Collections.Generic.List<(int stepNumber, string icon, string description, CLGFTheme theme, string[] details, bool isIndented)>();
+            int currentStep = 1;
+            
+            // Step 1: Trigger
+            steps.Add((currentStep++, "⚡", $"{triggerConfig.triggerType} trigger on '{(triggerObject ? triggerObject.name : "TriggerObject")}'", CLGFTheme.Action, new string[0], false));
+            
+            // Step 2: Conditions (only if they exist)
+            if (conditionConfigs.Count > 0)
+            {
+                string conditionText = $"Check {conditionConfigs.Count} condition(s)";
+                string requirement = requireAllConditions ? "All must be met" : "Any can be met";
+                steps.Add((currentStep++, "🔍", conditionText, CLGFTheme.Action, new[] { requirement }, false));
+            }
+            
+            // Step 3+: Events and Responses
             foreach (var eventConfig in eventChannelConfigs)
             {
-                EditorGUILayout.LabelField($"3. Raise '{eventConfig.eventName}' event");
+                steps.Add((currentStep++, "📡", $"Raise '{eventConfig.eventName}' event", CLGFTheme.Event, new string[0], false));
                 
                 var listeners = responseObjectConfigs.Where(r => r.listenToEvents.Contains(eventConfig.eventName)).ToArray();
                 foreach (var listener in listeners)
                 {
-                    EditorGUILayout.LabelField($"   → {listener.objectName} responds with {listener.actions.Count} action(s)");
+                    string[] actionDetails = listener.actions.Select(a => $"• {a.actionType}" + (a.executionDelay > 0 ? $" (delay: {a.executionDelay}s)" : "")).ToArray();
+                    steps.Add((currentStep++, "🎬", $"{listener.objectName} responds", CLGFTheme.ObjectControl, actionDetails, true)); // Indented response
+                }
+            }
+            
+            return steps;
+        }
+        
+        private void DrawFlowStep(int stepNumber, string icon, string description, CLGFTheme theme, string[] details, bool isIndented)
+        {
+            EditorGUILayout.BeginHorizontal();
+            
+            // Base indentation
+            float baseIndent = 16f;
+            float additionalIndent = isIndented ? 60f : 0f; // Extra indent for response steps
+            GUILayout.Space(baseIndent + additionalIndent);
+            
+            // Step number in a colored circle
+            var (stepBg, stepBorder) = GetCLGFThemeColors(theme);
+            stepBg.a = 0.3f;
+            stepBorder.a = 1f;
+            
+            GUIStyle stepNumberStyle = new GUIStyle(EditorStyles.boldLabel)
+            {
+                fontSize = 14,
+                fontStyle = FontStyle.Bold,
+                alignment = TextAnchor.MiddleCenter,
+                normal = { textColor = Color.white }
+            };
+            
+            // Draw step number circle
+            Rect numberRect = GUILayoutUtility.GetRect(30, 30);
+            if (Event.current.type == EventType.Repaint)
+            {
+                EditorGUI.DrawRect(numberRect, stepBorder);
+                EditorGUI.DrawRect(new Rect(numberRect.x + 1, numberRect.y + 1, numberRect.width - 2, numberRect.height - 2), stepBg);
+            }
+            EditorGUI.LabelField(numberRect, stepNumber.ToString(), stepNumberStyle);
+            
+            GUILayout.Space(12);
+            
+            // Icon and description - MUCH BIGGER ICONS (3x)
+            GUIStyle iconStyle = new GUIStyle(EditorStyles.boldLabel)
+            {
+                fontSize = 40, // 3x bigger from 16px
+                alignment = TextAnchor.UpperLeft
+            };
+            
+            GUIStyle descStyle = new GUIStyle(EditorStyles.boldLabel)
+            {
+                fontSize = 13,
+                fontStyle = FontStyle.Bold,
+                alignment = TextAnchor.LowerLeft
+            };
+            
+            EditorGUILayout.BeginVertical();
+            
+            EditorGUILayout.BeginHorizontal();
+            EditorGUILayout.LabelField(icon, iconStyle, GUILayout.Width(60), GUILayout.Height(50)); // Bigger space for bigger icon
+            EditorGUILayout.BeginVertical();
+            GUILayout.Space(05); // Center align with the larger icon
+            EditorGUILayout.LabelField(description, descStyle);
+            EditorGUILayout.EndVertical();
+            EditorGUILayout.EndHorizontal();
+            
+            // Additional details
+            if (details.Length > 0)
+            {
+                GUIStyle detailStyle = new GUIStyle(EditorStyles.label)
+                {
+                    fontSize = 11,
+                    fontStyle = FontStyle.Italic
+                };
+                
+                foreach (var detail in details)
+                {
+                    EditorGUILayout.BeginHorizontal();
+                    GUILayout.Space(85); // Align with icon space
+                    EditorGUILayout.LabelField(detail, detailStyle);
+                    EditorGUILayout.EndHorizontal();
                 }
             }
             
             EditorGUILayout.EndVertical();
+            
+            GUILayout.Space(16);
+            EditorGUILayout.EndHorizontal();
+        }
+        
+        private void DrawFlowArrow(bool fromIndented, bool toIndented)
+        {
+            EditorGUILayout.BeginHorizontal();
+            
+            // Calculate arrow position based on indentation
+            float baseIndent = 16f;
+            float fromIndentAmount = fromIndented ? 60f : 0f;
+            float toIndentAmount = toIndented ? 60f : 0f;
+            
+            // Position arrow at the step number circle center
+            GUILayout.Space(baseIndent + fromIndentAmount + 15f); // 15f = half of circle width (30px)
+            
+            GUIStyle arrowStyle = new GUIStyle(EditorStyles.boldLabel)
+            {
+                fontSize = 20,
+                alignment = TextAnchor.MiddleCenter,
+                normal = { textColor = new Color(0.6f, 0.6f, 0.6f, 1f) }
+            };
+            
+            // If transitioning between indent levels, show a connecting arrow
+            if (fromIndented != toIndented)
+            {
+                if (toIndented)
+                {
+                    // Going from main flow to indented - show angled arrow
+                    EditorGUILayout.LabelField("↘", arrowStyle, GUILayout.Width(30));
+                }
+                else
+                {
+                    // Going from indented back to main flow - show angled arrow
+                    EditorGUILayout.LabelField("↙", arrowStyle, GUILayout.Width(30));
+                }
+            }
+            else
+            {
+                // Straight down arrow
+                EditorGUILayout.LabelField("↓", arrowStyle, GUILayout.Width(30));
+            }
+            
+            GUILayout.FlexibleSpace();
+            EditorGUILayout.EndHorizontal();
+            
+            EditorGUILayout.Space(6);
         }
         
         private void DrawComplete()
         {
-            EditorGUILayout.LabelField("Complete Interaction Setup Complete!", EditorStyles.boldLabel);
+            GUIStyle titleStyle = new GUIStyle(EditorStyles.boldLabel)
+            {
+                fontSize = 16
+            };
+            EditorGUILayout.LabelField("✅ Complete Interaction Setup Complete!", titleStyle);
             
             EditorGUILayout.HelpBox("Your complete interaction system has been successfully created with event-driven architecture spanning multiple GameObjects.", MessageType.Info);
             
@@ -991,7 +1673,11 @@ namespace GameFramework.Events.Editor
             {
                 EditorGUILayout.Space(10);
                 
-                EditorGUILayout.LabelField("Created Components:", EditorStyles.boldLabel);
+                GUIStyle subsectionStyle = new GUIStyle(EditorStyles.boldLabel)
+                {
+                    fontSize = 14
+                };
+                EditorGUILayout.LabelField("🔧 Created Components:", subsectionStyle);
                 EditorGUILayout.LabelField($"• Trigger components on '{triggerObject.name}'");
                 
                 foreach (var eventConfig in eventChannelConfigs)
@@ -1413,6 +2099,8 @@ namespace GameFramework.Events.Editor
                     {
                         Debug.Log($"Created GameEvent asset: {eventConfig.eventName} at {AssetDatabase.GetAssetPath(gameEvent)}");
                         createdGameEvents[eventConfig.eventName] = gameEvent;
+                        // Store reference for later use
+                        eventConfig.gameEventAsset = gameEvent;
                     }
                     else
                     {
@@ -1421,16 +2109,33 @@ namespace GameFramework.Events.Editor
                 }
                 else
                 {
-                    // Load existing GameEvent asset
-                    gameEvent = LoadExistingGameEvent(eventConfig);
-                    if (gameEvent != null)
+                    // Use existing GameEvent asset (direct reference or path)
+                    if (eventConfig.gameEventAsset != null)
                     {
-                        Debug.Log($"Loaded existing GameEvent: {eventConfig.eventName} from {eventConfig.existingEventPath}");
+                        // Direct ScriptableObject reference
+                        gameEvent = eventConfig.gameEventAsset;
+                        Debug.Log($"Using existing GameEvent: {gameEvent.ChannelName} from ObjectField");
                         createdGameEvents[eventConfig.eventName] = gameEvent;
+                    }
+                    else if (!string.IsNullOrEmpty(eventConfig.existingEventPath))
+                    {
+                        // Legacy path-based loading (for templates)
+                        gameEvent = LoadExistingGameEvent(eventConfig);
+                        if (gameEvent != null)
+                        {
+                            Debug.Log($"Loaded existing GameEvent: {eventConfig.eventName} from {eventConfig.existingEventPath}");
+                            createdGameEvents[eventConfig.eventName] = gameEvent;
+                            // Store reference for consistency
+                            eventConfig.gameEventAsset = gameEvent;
+                        }
+                        else
+                        {
+                            Debug.LogError($"Failed to load existing GameEvent: {eventConfig.existingEventPath}");
+                        }
                     }
                     else
                     {
-                        Debug.LogError($"Failed to load existing GameEvent: {eventConfig.existingEventPath}");
+                        Debug.LogError($"No GameEvent specified for event config: {eventConfig.eventName}");
                     }
                 }
             }
@@ -1663,27 +2368,39 @@ namespace GameFramework.Events.Editor
         {
             try
             {
-                // Try finding by exact name first
-                GameObject responseObject = GameObject.Find(responseConfig.targetObjectId);
+                GameObject responseObject = null;
                 
-                if (responseObject == null)
+                // Try direct GameObject reference first (new approach)
+                if (responseConfig.targetGameObject != null)
                 {
-                    // Try finding by partial name match
-                    GameObject[] allObjects = GameObject.FindObjectsOfType<GameObject>();
-                    foreach (var obj in allObjects)
+                    responseObject = responseConfig.targetGameObject;
+                    Debug.Log($"Using existing response object from ObjectField: {responseObject.name}");
+                }
+                // Fall back to legacy name-based lookup (for templates)
+                else if (!string.IsNullOrEmpty(responseConfig.targetObjectId))
+                {
+                    // Try finding by exact name first
+                    responseObject = GameObject.Find(responseConfig.targetObjectId);
+                    
+                    if (responseObject == null)
                     {
-                        if (obj.name.Contains(responseConfig.targetObjectId))
+                        // Try finding by partial name match
+                        GameObject[] allObjects = GameObject.FindObjectsOfType<GameObject>();
+                        foreach (var obj in allObjects)
                         {
-                            responseObject = obj;
-                            Debug.Log($"Found object by partial name match: {obj.name}");
-                            break;
+                            if (obj.name.Contains(responseConfig.targetObjectId))
+                            {
+                                responseObject = obj;
+                                Debug.Log($"Found object by partial name match: {obj.name}");
+                                break;
+                            }
                         }
                     }
-                }
-                
-                if (responseObject != null)
-                {
-                    Debug.Log($"Found existing response object: {responseObject.name}");
+                    
+                    if (responseObject != null)
+                    {
+                        Debug.Log($"Found existing response object by name: {responseObject.name}");
+                    }
                 }
                 
                 return responseObject;

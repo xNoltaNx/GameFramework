@@ -42,6 +42,11 @@ namespace GameFramework.Events.Channels
         }
         
         /// <summary>
+        /// The description of this event channel.
+        /// </summary>
+        public string Description => description;
+        
+        /// <summary>
         /// Reset the channel to its initial state.
         /// </summary>
         public virtual void Reset()

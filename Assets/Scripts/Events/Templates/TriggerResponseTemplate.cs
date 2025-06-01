@@ -170,7 +170,10 @@ namespace GameFramework.Events.Templates
         public string eventName = "NewEvent";
         public string description = "";
         public bool createNewEvent = true;
-        public string existingEventPath = ""; // Path to existing GameEvent asset
+        public string existingEventPath = ""; // Path to existing GameEvent asset (for templates)
+        
+        // Direct ScriptableObject reference for Unity's ObjectField
+        public GameFramework.Events.Channels.GameEvent gameEventAsset;
     }
     
     /// <summary>
@@ -182,7 +185,11 @@ namespace GameFramework.Events.Templates
         public string objectName = "ResponseObject";
         public string description = "";
         public bool createNewObject = true;
-        public string targetObjectId = ""; // For existing objects
+        public string targetObjectId = ""; // For existing objects (legacy)
+        
+        // Direct GameObject reference for Unity's ObjectField
+        public GameObject targetGameObject;
+        
         public List<string> listenToEvents = new List<string>(); // Event names this object responds to
         public List<ActionConfig> actions = new List<ActionConfig>();
     }

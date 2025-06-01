@@ -1295,13 +1295,14 @@ MonoBehaviour:
   onEventRaised:
     m_PersistentCalls:
       m_Calls:
-      - m_Target: {fileID: 327517488}
-        m_TargetAssemblyTypeName: UnityEngine.Renderer, UnityEngine
-        m_MethodName: set_material
-        m_Mode: 2
+      - m_Target: {fileID: 327517491}
+        m_TargetAssemblyTypeName: GameFramework.Events.Actions.BaseTriggerAction,
+          GameFramework.Events
+        m_MethodName: Execute
+        m_Mode: 1
         m_Arguments:
-          m_ObjectArgument: {fileID: 2100000, guid: d6f4d833415370e4885e1e77058bf834, type: 2}
-          m_ObjectArgumentAssemblyTypeName: UnityEngine.Material, UnityEngine
+          m_ObjectArgument: {fileID: 0}
+          m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
           m_IntArgument: 0
           m_FloatArgument: 0
           m_StringArgument: 
@@ -1317,27 +1318,46 @@ MonoBehaviour:
   m_GameObject: {fileID: 327517485}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 5c909cfb69d084b41a9c13b80befdbca, type: 3}
+  m_Script: {fileID: 11500000, guid: d9be71daa641c6b4e8881684a72e078c, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  gameEvent: {fileID: 11400000, guid: 9341a40c0a45fea47b8ddc3e10f3b68c, type: 2}
-  autoSubscribe: 1
-  onEventRaised:
-    m_PersistentCalls:
-      m_Calls:
-      - m_Target: {fileID: 327517488}
-        m_TargetAssemblyTypeName: UnityEngine.Renderer, UnityEngine
-        m_MethodName: set_material
-        m_Mode: 2
-        m_Arguments:
-          m_ObjectArgument: {fileID: 2100000, guid: a071545b123c73c4aa9dd52fc683e900, type: 2}
-          m_ObjectArgumentAssemblyTypeName: UnityEngine.Material, UnityEngine
-          m_IntArgument: 0
-          m_FloatArgument: 0
-          m_StringArgument: 
-          m_BoolArgument: 0
-        m_CallState: 2
-  debugMode: 1
+  isEnabled: 1
+  executionDelay: 0
+  stopOnDisable: 1
+  debugMode: 0
+  targetRenderer: {fileID: 327517488}
+  targetMaterial: {fileID: 0}
+  materialIndex: 0
+  useSharedMaterial: 0
+  useMaterialPropertyBlock: 1
+  duration: 1
+  animateSequentially: 0
+  sequentialDelay: 0.1
+  propertyChanges:
+  - propertyType: 1
+    propertyName: _BaseColor
+    floatStartValue: 0
+    floatTargetValue: 1
+    colorStartValue: {r: 0, g: 0, b: 0, a: 0}
+    colorTargetValue: {r: 1, g: 0, b: 0, a: 1}
+    vectorStartValue: {x: 0, y: 0, z: 0, w: 0}
+    vectorTargetValue: {x: 0, y: 0, z: 0, w: 0}
+    targetTexture: {fileID: 0}
+    animateOffset: 0
+    offsetStartValue: {x: 0, y: 0}
+    offsetTargetValue: {x: 0, y: 0}
+    animateScale: 0
+    scaleStartValue: {x: 0, y: 0}
+    scaleTargetValue: {x: 0, y: 0}
+    animateFromCurrent: 1
+    easingSettings:
+      easingType: 30
+      customCurve:
+        serializedVersion: 2
+        m_Curve: []
+        m_PreInfinity: 0
+        m_PostInfinity: 0
+        m_RotationOrder: 0
 --- !u!1 &410087039
 GameObject:
   m_ObjectHideFlags: 0
@@ -3040,6 +3060,153 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!1 &1192332271
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1192332275}
+  - component: {fileID: 1192332274}
+  - component: {fileID: 1192332273}
+  - component: {fileID: 1192332272}
+  m_Layer: 0
+  m_Name: MyCoin
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!114 &1192332272
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1192332271}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 0445d2e26b5a7154bba4ff4f310c6cd2, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  isEnabled: 1
+  executionDelay: 0
+  stopOnDisable: 1
+  debugMode: 0
+  targetTransform: {fileID: 0}
+  targetPosition: {x: 0, y: 0, z: 0}
+  useLocalPosition: 0
+  useTargetTransform: 1
+  duration: 1
+  easingSettings:
+    easingType: 0
+    customCurve:
+      serializedVersion: 2
+      m_Curve:
+      - serializedVersion: 3
+        time: 0
+        value: 0
+        inSlope: 0
+        outSlope: 1
+        tangentMode: 0
+        weightedMode: 0
+        inWeight: 0
+        outWeight: 0
+      - serializedVersion: 3
+        time: 1
+        value: 1
+        inSlope: 1
+        outSlope: 0
+        tangentMode: 0
+        weightedMode: 0
+        inWeight: 0
+        outWeight: 0
+      m_PreInfinity: 2
+      m_PostInfinity: 2
+      m_RotationOrder: 4
+  moveRelative: 0
+--- !u!114 &1192332273
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1192332271}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 8df733ea6df22fb45991beae584d5b90, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  isActive: 1
+  canRepeat: 1
+  cooldownTime: 0
+  conditions: []
+  requireAllConditions: 1
+  onTriggered:
+    m_PersistentCalls:
+      m_Calls: []
+  onEnabled:
+    m_PersistentCalls:
+      m_Calls: []
+  onDisabled:
+    m_PersistentCalls:
+      m_Calls: []
+  debugMode: 0
+  showTriggerSettings: 1
+  showCollisionSettings: 1
+  triggerEvent: 0
+  triggerLayers:
+    serializedVersion: 2
+    m_Bits: 8
+  requiredTag: Player
+  requireRigidbody: 0
+  onObjectEntered:
+    m_PersistentCalls:
+      m_Calls: []
+  onObjectExited:
+    m_PersistentCalls:
+      m_Calls: []
+  onObjectStaying:
+    m_PersistentCalls:
+      m_Calls: []
+--- !u!65 &1192332274
+BoxCollider:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1192332271}
+  m_Material: {fileID: 0}
+  m_IncludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_ExcludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_LayerOverridePriority: 0
+  m_IsTrigger: 0
+  m_ProvidesContacts: 0
+  m_Enabled: 1
+  serializedVersion: 3
+  m_Size: {x: 1, y: 1, z: 1}
+  m_Center: {x: 0, y: 0, z: 0}
+--- !u!4 &1192332275
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1192332271}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 5.15, y: 1.16099, z: 15.30472}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &1227000963
 GameObject:
   m_ObjectHideFlags: 0
@@ -4476,7 +4643,6 @@ GameObject:
   - component: {fileID: 1961220818}
   - component: {fileID: 1961220817}
   - component: {fileID: 1961220821}
-  - component: {fileID: 1961220822}
   m_Layer: 0
   m_Name: TriggerTest
   m_TagString: Untagged
@@ -4511,9 +4677,9 @@ MonoBehaviour:
     m_PersistentCalls:
       m_Calls: []
   debugMode: 1
-  showTriggerSettings: 1
+  showTriggerSettings: 0
   showCollisionSettings: 1
-  triggerEvent: 0
+  triggerEvent: 1
   triggerLayers:
     serializedVersion: 2
     m_Bits: 8
@@ -4537,20 +4703,7 @@ MonoBehaviour:
         m_CallState: 2
   onObjectExited:
     m_PersistentCalls:
-      m_Calls:
-      - m_Target: {fileID: 1961220822}
-        m_TargetAssemblyTypeName: GameFramework.Events.Actions.BaseTriggerAction,
-          GameFramework.Events
-        m_MethodName: Execute
-        m_Mode: 0
-        m_Arguments:
-          m_ObjectArgument: {fileID: 0}
-          m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
-          m_IntArgument: 0
-          m_FloatArgument: 0
-          m_StringArgument: 
-          m_BoolArgument: 0
-        m_CallState: 2
+      m_Calls: []
   onObjectStaying:
     m_PersistentCalls:
       m_Calls: []
@@ -4606,26 +4759,12 @@ MonoBehaviour:
   executionDelay: 0
   stopOnDisable: 1
   debugMode: 0
-  gameEvent: {fileID: 11400000, guid: dbaf3927bdcaeed4592fc9d221f4b235, type: 2}
+  gameEvents:
+  - {fileID: 11400000, guid: dbaf3927bdcaeed4592fc9d221f4b235, type: 2}
+  - {fileID: 11400000, guid: 9341a40c0a45fea47b8ddc3e10f3b68c, type: 2}
   createEventIfNull: 0
---- !u!114 &1961220822
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1961220816}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: bbfee8e537e0be04fb4b2317df9dc61e, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  isEnabled: 1
-  executionDelay: 0
-  stopOnDisable: 1
-  debugMode: 0
-  gameEvent: {fileID: 11400000, guid: 9341a40c0a45fea47b8ddc3e10f3b68c, type: 2}
-  createEventIfNull: 0
+  raiseSequentially: 0
+  sequentialDelay: 0.1
 --- !u!1 &1999986598
 GameObject:
   m_ObjectHideFlags: 0
@@ -5470,7 +5609,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 3717906627796027250, guid: 89e73578ec890cc42962270f7d45dc86, type: 3}
       propertyPath: field of view
-      value: 75
+      value: 85
       objectReference: {fileID: 0}
     - target: {fileID: 5106919921863684212, guid: 89e73578ec890cc42962270f7d45dc86, type: 3}
       propertyPath: m_Name
@@ -5546,3 +5685,4 @@ SceneRoots:
   - {fileID: 1385658215}
   - {fileID: 1961220819}
   - {fileID: 1187733237}
+  - {fileID: 1192332275}
