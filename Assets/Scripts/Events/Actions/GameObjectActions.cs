@@ -7,6 +7,7 @@ namespace GameFramework.Events.Actions
     /// Action that enables or disables a GameObject.
     /// </summary>
     [AddComponentMenu("GameFramework/Events/Actions/GameObject Activate Action")]
+    [ActionDefinition("gameobject-activate", "👁️", "GameObject Activate Action", "Enables or disables GameObjects and their children", "GameObject", 20)]
     public class GameObjectActivateAction : BaseTriggerAction
     {
         [Header("Activation Settings")]
@@ -76,6 +77,7 @@ namespace GameFramework.Events.Actions
     /// Action that instantiates a prefab.
     /// </summary>
     [AddComponentMenu("GameFramework/Events/Actions/Instantiate Action")]
+    [ActionDefinition("instantiate", "✨", "Instantiate Action", "Creates new instances of prefabs at specified locations", "GameObject", 30)]
     public class InstantiateAction : BaseTriggerAction
     {
         [Header("Instantiate Settings")]
@@ -162,6 +164,7 @@ namespace GameFramework.Events.Actions
     /// Action that destroys GameObjects.
     /// </summary>
     [AddComponentMenu("GameFramework/Events/Actions/Destroy Action")]
+    [ActionDefinition("destroy", "💥", "Destroy Action", "Destroys GameObjects with optional delay and effects", "GameObject", 40)]
     public class DestroyAction : BaseTriggerAction
     {
         [Header("Destroy Settings")]
@@ -258,6 +261,7 @@ namespace GameFramework.Events.Actions
     /// Action that enables or disables components.
     /// </summary>
     [AddComponentMenu("GameFramework/Events/Actions/Component Toggle Action")]
+    [ActionDefinition("component-toggle", "🔧", "Component Toggle Action", "Enables or disables specific components on GameObjects", "GameObject", 50)]
     public class ComponentToggleAction : BaseTriggerAction
     {
         [Header("Component Settings")]

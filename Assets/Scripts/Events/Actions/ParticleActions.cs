@@ -7,6 +7,7 @@ namespace GameFramework.Events.Actions
     /// Action that controls particle systems with various configuration options.
     /// </summary>
     [AddComponentMenu("GameFramework/Events/Actions/Particle Action")]
+    [ActionDefinition("particle-control", "✨", "Particle Action", "Controls particle systems with play, stop, emission rate, burst, and property modifications", "Visual", 170)]
     public class ParticleAction : BaseTriggerAction
     {
         [System.Serializable]

@@ -8,6 +8,7 @@ namespace GameFramework.Events.Actions
     /// Action that animates light properties over time.
     /// </summary>
     [AddComponentMenu("GameFramework/Events/Actions/Light Action")]
+    [ActionDefinition("light-control", "💡", "Light Action", "Animates light properties including intensity, color, range, and spot angle over time", "Visual", 160)]
     public class LightAction : BaseTriggerAction
     {
         [System.Serializable]

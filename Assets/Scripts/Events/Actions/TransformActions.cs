@@ -8,6 +8,7 @@ namespace GameFramework.Events.Actions
     /// Action that moves a transform to a target position over time.
     /// </summary>
     [AddComponentMenu("GameFramework/Events/Actions/Move Action")]
+    [ActionDefinition("move", "📐", "Move Action", "Smoothly moves transforms to target positions with easing", "Transform", 60)]
     public class MoveAction : BaseTriggerAction
     {
         [Header("Move Settings")]
@@ -123,6 +124,7 @@ namespace GameFramework.Events.Actions
     /// Action that rotates a transform to a target rotation over time.
     /// </summary>
     [AddComponentMenu("GameFramework/Events/Actions/Rotate Action")]
+    [ActionDefinition("rotate", "🔄", "Rotate Action", "Smoothly rotates transforms to target rotations with easing", "Transform", 70)]
     public class RotateAction : BaseTriggerAction
     {
         [Header("Rotate Settings")]
@@ -226,6 +228,7 @@ namespace GameFramework.Events.Actions
     /// Action that scales a transform to a target scale over time.
     /// </summary>
     [AddComponentMenu("GameFramework/Events/Actions/Scale Action")]
+    [ActionDefinition("scale", "📏", "Scale Action", "Smoothly scales transforms to target sizes with easing", "Transform", 80)]
     public class ScaleAction : BaseTriggerAction
     {
         [Header("Scale Settings")]

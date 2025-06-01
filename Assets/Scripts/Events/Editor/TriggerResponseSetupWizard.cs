@@ -1440,9 +1440,22 @@ namespace GameFramework.Events.Editor
                 EditorGUILayout.BeginHorizontal();
                 
                 // Get action-specific icon
-                string actionIcon = GetActionIcon(responseConfig.actions[j].actionType);
+                string actionIcon = GetActionIcon(responseConfig.actions[j].ActionId);
                 
-                responseConfig.actions[j].actionType = (ActionType)EditorGUILayout.EnumPopup($"{actionIcon} Action {j + 1}", responseConfig.actions[j].actionType);
+                // Use ActionDiscoveryService to populate dropdown
+                var allActions = ActionDiscoveryService.GetSortedActions();
+                var actionNames = allActions.Select(a => $"{a.Icon} {a.DisplayName}").ToArray();
+                var actionIds = allActions.Select(a => a.ActionId).ToArray();
+                
+                int currentIndex = Array.IndexOf(actionIds, responseConfig.actions[j].ActionId);
+                if (currentIndex == -1) currentIndex = 0; // Default to first action if not found
+                
+                int newIndex = EditorGUILayout.Popup($"Action {j + 1}", currentIndex, actionNames);
+                if (newIndex != currentIndex && newIndex >= 0 && newIndex < actionIds.Length)
+                {
+                    responseConfig.actions[j].ActionId = actionIds[newIndex];
+                }
+                
                 responseConfig.actions[j].executionDelay = EditorGUILayout.FloatField("Delay", responseConfig.actions[j].executionDelay, GUILayout.Width(80));
                 
                 if (GUILayout.Button("✕", GUILayout.Width(25)))
@@ -1456,33 +1469,16 @@ namespace GameFramework.Events.Editor
             
             if (GUILayout.Button("➕ Add Action", GUILayout.Height(20)))
             {
-                responseConfig.actions.Add(new ActionConfig());
+                responseConfig.actions.Add(new ActionConfig { ActionId = "audio-action" });
             }
         }
         
-        private string GetActionIcon(ActionType actionType)
+        private string GetActionIcon(string actionId)
         {
-            // Return larger icons (2x size effect through font styling)
-            return actionType switch
-            {
-                ActionType.AudioAction => "🔊",              // Sound/Audio
-                ActionType.GameObjectActivateAction => "👁️",  // Visibility toggle  
-                ActionType.InstantiateAction => "✨",         // Create/Spawn
-                ActionType.DestroyAction => "💥",             // Destruction
-                ActionType.ComponentToggleAction => "🔧",     // Component control
-                ActionType.MoveAction => "📐",                // Movement/Position
-                ActionType.RotateAction => "🔄",              // Rotation
-                ActionType.ScaleAction => "📏",               // Scale/Size
-                ActionType.MaterialPropertyAction => "🎨",    // Material/Appearance
-                ActionType.LightAction => "💡",              // Lighting
-                ActionType.ParticleAction => "✨",            // Particle effects
-                ActionType.PhysicsAction => "⚽",             // Physics
-                ActionType.AnimationAction => "🎬",           // Animation
-                ActionType.RaiseGameEventAction => "📡",      // Event broadcasting
-                ActionType.Custom => "🔧",                   // Custom/Generic
-                _ => "🎯"                                     // Default fallback
-            };
+            var actionDef = ActionDiscoveryService.GetAction(actionId);
+            return actionDef?.Icon ?? "🎯";
         }
+        
         
         private string GetResponseObjectDisplayName(ResponseObjectConfig responseConfig)
         {
@@ -1709,7 +1705,7 @@ namespace GameFramework.Events.Editor
                         }
                         foreach (var action in responseConfig.actions)
                         {
-                            EditorGUILayout.LabelField($"  → Action: {action.actionType}" + (action.executionDelay > 0 ? $" (delay: {action.executionDelay}s)" : ""));
+                            EditorGUILayout.LabelField($"  → Action: {action.ActionId}" + (action.executionDelay > 0 ? $" (delay: {action.executionDelay}s)" : ""));
                         }
                     }
                 }
@@ -1812,7 +1808,7 @@ namespace GameFramework.Events.Editor
                 var listeners = responseObjectConfigs.Where(r => r.listenToEvents.Contains(eventConfig.eventName)).ToArray();
                 foreach (var listener in listeners)
                 {
-                    string[] actionDetails = listener.actions.Select(a => $"• {a.actionType}" + (a.executionDelay > 0 ? $" (delay: {a.executionDelay}s)" : "")).ToArray();
+                    string[] actionDetails = listener.actions.Select(a => $"• {a.ActionId}" + (a.executionDelay > 0 ? $" (delay: {a.executionDelay}s)" : "")).ToArray();
                     steps.Add((currentStep++, "🎬", $"{listener.objectName} responds", CLGFTheme.ObjectControl, actionDetails, true)); // Indented response
                 }
             }
@@ -2127,40 +2123,18 @@ namespace GameFramework.Events.Editor
         
         private void DrawActionTypeSettings(ActionConfig actionConfig)
         {
-            // Placeholder for action-specific settings
-            // In a full implementation, you'd add specific UI for each action type
-            switch (actionConfig.actionType)
+            // Use action discovery system to get action information
+            var actionDef = ActionDiscoveryService.GetAction(actionConfig.ActionId);
+            if (actionDef != null)
             {
-                case ActionType.AudioAction:
-                    EditorGUILayout.HelpBox("Audio settings: Configure audio clips, volume, pitch, 3D settings.", MessageType.Info);
-                    break;
-                case ActionType.GameObjectActivateAction:
-                    EditorGUILayout.HelpBox("GameObject settings: Configure which objects to activate/deactivate.", MessageType.Info);
-                    break;
-                case ActionType.MoveAction:
-                    EditorGUILayout.HelpBox("Movement settings: Configure target position, duration, easing.", MessageType.Info);
-                    break;
-                case ActionType.RotateAction:
-                    EditorGUILayout.HelpBox("Rotation settings: Configure target rotation, duration, easing.", MessageType.Info);
-                    break;
-                case ActionType.ScaleAction:
-                    EditorGUILayout.HelpBox("Scale settings: Configure target scale, duration, easing.", MessageType.Info);
-                    break;
-                case ActionType.InstantiateAction:
-                    EditorGUILayout.HelpBox("Instantiate settings: Configure prefab, spawn position, rotation.", MessageType.Info);
-                    break;
-                case ActionType.DestroyAction:
-                    EditorGUILayout.HelpBox("Destroy settings: Configure target objects, delay, effects.", MessageType.Info);
-                    break;
-                case ActionType.ComponentToggleAction:
-                    EditorGUILayout.HelpBox("Component settings: Configure which components to enable/disable.", MessageType.Info);
-                    break;
-                case ActionType.MaterialPropertyAction:
-                    EditorGUILayout.HelpBox("Material settings: Configure material properties to modify.", MessageType.Info);
-                    break;
-                default:
-                    EditorGUILayout.HelpBox("Action-specific settings will be configured on the component.", MessageType.Info);
-                    break;
+                string description = string.IsNullOrEmpty(actionDef.Description) 
+                    ? "Action-specific settings will be configured on the component."
+                    : actionDef.Description;
+                EditorGUILayout.HelpBox(description, MessageType.Info);
+            }
+            else
+            {
+                EditorGUILayout.HelpBox($"Unknown action type: {actionConfig.ActionId}. Action-specific settings will be configured on the component.", MessageType.Warning);
             }
         }
         
@@ -2951,16 +2925,16 @@ namespace GameFramework.Events.Editor
                         ConnectActionToEventListeners(responseObject, action, responseConfig);
                         
                         UnityEditor.EditorUtility.SetDirty(action);
-                        Debug.Log($"Created and configured {actionConfig.actionType} on {responseObject.name}");
+                        Debug.Log($"Created and configured {actionConfig.ActionId} on {responseObject.name}");
                     }
                     else
                     {
-                        Debug.LogWarning($"Failed to create action component: {actionConfig.actionType} on {responseObject.name}");
+                        Debug.LogWarning($"Failed to create action component: {actionConfig.ActionId} on {responseObject.name}");
                     }
                 }
                 catch (System.Exception e)
                 {
-                    Debug.LogError($"Exception creating action '{actionConfig.actionType}' on '{responseObject.name}': {e.Message}");
+                    Debug.LogError($"Exception creating action '{actionConfig.ActionId}' on '{responseObject.name}': {e.Message}");
                 }
             }
         }
@@ -3047,20 +3021,8 @@ namespace GameFramework.Events.Editor
         
         private BaseTriggerAction CreateActionComponent(GameObject targetObj, ActionConfig actionConfig)
         {
-            return actionConfig.actionType switch
-            {
-                ActionType.AudioAction => targetObj.AddComponent<AudioAction>(),
-                ActionType.GameObjectActivateAction => targetObj.AddComponent<GameObjectActivateAction>(),
-                ActionType.InstantiateAction => targetObj.AddComponent<InstantiateAction>(),
-                ActionType.DestroyAction => targetObj.AddComponent<DestroyAction>(),
-                ActionType.ComponentToggleAction => targetObj.AddComponent<ComponentToggleAction>(),
-                ActionType.MoveAction => targetObj.AddComponent<MoveAction>(),
-                ActionType.RotateAction => targetObj.AddComponent<RotateAction>(),
-                ActionType.ScaleAction => targetObj.AddComponent<ScaleAction>(),
-                ActionType.MaterialPropertyAction => targetObj.AddComponent<MaterialPropertyAction>(),
-                // Note: Other action types like LightAction, ParticleAction, etc. would be added as they're implemented
-                _ => null
-            };
+            // Use the new action discovery system
+            return ActionDiscoveryService.CreateActionComponent(targetObj, actionConfig.ActionId);
         }
         
         private void ConfigureActionComponent(BaseTriggerAction action, ActionConfig actionConfig)

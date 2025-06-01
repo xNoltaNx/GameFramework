@@ -7,6 +7,7 @@ namespace GameFramework.Events.Actions
     /// Action that plays audio clips with various configuration options.
     /// </summary>
     [AddComponentMenu("GameFramework/Events/Actions/Audio Action")]
+    [ActionDefinition("audio-action", "🔊", "Audio Action", "Plays audio clips with configurable volume, pitch, and 3D settings", "Audio", 10)]
     public class AudioAction : BaseTriggerAction
     {
         [System.Serializable]

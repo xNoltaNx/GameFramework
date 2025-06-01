@@ -11,6 +11,7 @@ namespace GameFramework.Events.Actions
     /// Action that controls Animator and Timeline components.
     /// </summary>
     [AddComponentMenu("GameFramework/Events/Actions/Animation Action")]
+    [ActionDefinition("animation-control", "🎬", "Animation Action", "Controls Animator and Timeline components with play, parameters, and speed modifications", "Animation", 190)]
     public class AnimationAction : BaseTriggerAction
     {
         [System.Serializable]

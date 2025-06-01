@@ -10,11 +10,11 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 2cd9ba25a77594d4b985c11ceba028d9, type: 3}
-  m_Name: NewEvent
+  m_Name: ItemCollected
   m_EditorClassIdentifier: 
-  channelName: NewEvent
+  channelName: ItemCollected
   isActive: 1
   debugMode: 0
-  description: 
+  description: Triggered when player picks up an item
   raisedCount: 0
   lastRaisedTime: 0

@@ -101,9 +101,18 @@ namespace GameFramework.Events.Templates
     [Serializable]
     public class ActionConfig
     {
-        public ActionType actionType = ActionType.AudioAction;
+        [SerializeField] private string actionId = "audio-action";
         public float executionDelay = 0f;
         public string actionData = ""; // JSON or serialized data for action-specific settings
+        
+        /// <summary>
+        /// The action ID used by the action discovery system.
+        /// </summary>
+        public string ActionId 
+        { 
+            get => actionId;
+            set => actionId = value;
+        }
     }
     
     /// <summary>
@@ -128,27 +137,6 @@ namespace GameFramework.Events.Templates
         Custom
     }
     
-    /// <summary>
-    /// Supported action types
-    /// </summary>
-    public enum ActionType
-    {
-        AudioAction,
-        GameObjectActivateAction,
-        InstantiateAction,
-        DestroyAction,
-        ComponentToggleAction,
-        MoveAction,
-        RotateAction,
-        ScaleAction,
-        MaterialPropertyAction,
-        LightAction,
-        ParticleAction,
-        PhysicsAction,
-        AnimationAction,
-        RaiseGameEventAction,
-        Custom
-    }
     
     /// <summary>
     /// Supported collider types for collision triggers

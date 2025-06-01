@@ -8,6 +8,7 @@ namespace GameFramework.Events.Actions
     /// Action that raises multiple GameEvent channels.
     /// </summary>
     [AddComponentMenu("GameFramework/Events/Actions/Raise Game Event Action")]
+    [ActionDefinition("raise-gameevent", "📡", "Raise GameEvent Action", "Triggers multiple GameEvent channels with optional data", "Events", 100)]
     public class RaiseGameEventAction : BaseTriggerAction
     {
         [Header("Event Settings")]
@@ -129,6 +130,7 @@ namespace GameFramework.Events.Actions
     /// Action that raises multiple int event channels.
     /// </summary>
     [AddComponentMenu("GameFramework/Events/Actions/Raise Int Event Action")]
+    [ActionDefinition("raise-intevent", "🔢", "Raise IntEvent Action", "Triggers multiple IntEvent channels with specified integer values", "Events", 110)]
     public class RaiseIntEventAction : BaseTriggerAction
     {
         [Header("Event Settings")]
@@ -248,6 +250,7 @@ namespace GameFramework.Events.Actions
     /// Action that raises multiple float event channels.
     /// </summary>
     [AddComponentMenu("GameFramework/Events/Actions/Raise Float Event Action")]
+    [ActionDefinition("raise-floatevent", "📊", "Raise FloatEvent Action", "Triggers multiple FloatEvent channels with specified float values", "Events", 120)]
     public class RaiseFloatEventAction : BaseTriggerAction
     {
         [Header("Event Settings")]
@@ -367,6 +370,7 @@ namespace GameFramework.Events.Actions
     /// Action that raises multiple string event channels.
     /// </summary>
     [AddComponentMenu("GameFramework/Events/Actions/Raise String Event Action")]
+    [ActionDefinition("raise-stringevent", "📝", "Raise StringEvent Action", "Triggers multiple StringEvent channels with specified string values", "Events", 130)]
     public class RaiseStringEventAction : BaseTriggerAction
     {
         [Header("Event Settings")]
@@ -495,6 +499,7 @@ namespace GameFramework.Events.Actions
     /// Action that raises multiple Vector3 event channels.
     /// </summary>
     [AddComponentMenu("GameFramework/Events/Actions/Raise Vector3 Event Action")]
+    [ActionDefinition("raise-vector3event", "📐", "Raise Vector3Event Action", "Triggers multiple Vector3Event channels with specified Vector3 values", "Events", 140)]
     public class RaiseVector3EventAction : BaseTriggerAction
     {
         [Header("Event Settings")]
@@ -630,6 +635,7 @@ namespace GameFramework.Events.Actions
     /// Action that raises multiple GameObject event channels.
     /// </summary>
     [AddComponentMenu("GameFramework/Events/Actions/Raise GameObject Event Action")]
+    [ActionDefinition("raise-gameobjectevent", "🎯", "Raise GameObjectEvent Action", "Triggers multiple GameObjectEvent channels with specified GameObject references", "Events", 150)]
     public class RaiseGameObjectEventAction : BaseTriggerAction
     {
         [Header("Event Settings")]

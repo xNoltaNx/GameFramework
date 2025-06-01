@@ -61,7 +61,7 @@ namespace GameFramework.Events.Templates
                     description = "Plays pickup sound",
                     createNewObject = true,
                     listenToEvents = new List<string> { "ItemCollected" },
-                    actions = new List<ActionConfig> { new ActionConfig { actionType = ActionType.AudioAction, executionDelay = 0f } }
+                    actions = new List<ActionConfig> { new ActionConfig { ActionId = "audio-action", executionDelay = 0f } }
                 },
                 new ResponseObjectConfig 
                 { 
@@ -69,7 +69,7 @@ namespace GameFramework.Events.Templates
                     description = "Deactivates the item visual",
                     createNewObject = false,
                     listenToEvents = new List<string> { "ItemCollected" },
-                    actions = new List<ActionConfig> { new ActionConfig { actionType = ActionType.GameObjectActivateAction, executionDelay = 0.1f } }
+                    actions = new List<ActionConfig> { new ActionConfig { ActionId = "gameobject-activate", executionDelay = 0.1f } }
                 }
             };
             SetTemplateField(template, "responseObjects", responseObjects);
@@ -108,7 +108,7 @@ namespace GameFramework.Events.Templates
             // Actions
             var actions = new List<ActionConfig>
             {
-                new ActionConfig { actionType = ActionType.AudioAction, executionDelay = 0f }
+                new ActionConfig { ActionId = "audio-action", executionDelay = 0f }
             };
             SetTemplateField(template, "actions", actions);
             
@@ -143,8 +143,8 @@ namespace GameFramework.Events.Templates
             // Actions
             var actions = new List<ActionConfig>
             {
-                new ActionConfig { actionType = ActionType.AudioAction, executionDelay = 0f },
-                new ActionConfig { actionType = ActionType.GameObjectActivateAction, executionDelay = 0.5f }
+                new ActionConfig { ActionId = "audio-action", executionDelay = 0f },
+                new ActionConfig { ActionId = "gameobject-activate", executionDelay = 0.5f }
             };
             SetTemplateField(template, "actions", actions);
             
@@ -180,8 +180,8 @@ namespace GameFramework.Events.Templates
             // Actions
             var actions = new List<ActionConfig>
             {
-                new ActionConfig { actionType = ActionType.AudioAction, executionDelay = 0f },
-                new ActionConfig { actionType = ActionType.ComponentToggleAction, executionDelay = 0.2f }
+                new ActionConfig { ActionId = "audio-action", executionDelay = 0f },
+                new ActionConfig { ActionId = "component-toggle", executionDelay = 0.2f }
             };
             SetTemplateField(template, "actions", actions);
             
@@ -219,8 +219,8 @@ namespace GameFramework.Events.Templates
             // Actions
             var actions = new List<ActionConfig>
             {
-                new ActionConfig { actionType = ActionType.AudioAction, executionDelay = 0f },
-                new ActionConfig { actionType = ActionType.ComponentToggleAction, executionDelay = 0.1f }
+                new ActionConfig { ActionId = "audio-action", executionDelay = 0f },
+                new ActionConfig { ActionId = "component-toggle", executionDelay = 0.1f }
             };
             SetTemplateField(template, "actions", actions);
             

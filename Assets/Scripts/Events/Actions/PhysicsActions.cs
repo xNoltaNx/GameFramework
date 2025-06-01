@@ -7,6 +7,7 @@ namespace GameFramework.Events.Actions
     /// Action that applies physics forces and manipulates rigidbody properties.
     /// </summary>
     [AddComponentMenu("GameFramework/Events/Actions/Physics Action")]
+    [ActionDefinition("physics-control", "⚽", "Physics Action", "Applies forces, velocities, explosions, and modifies rigidbody properties for physics interactions", "Physics", 180)]
     public class PhysicsAction : BaseTriggerAction
     {
         [System.Serializable]

@@ -9,6 +9,7 @@ namespace GameFramework.Events.Actions
     /// Unified action for animating multiple material properties of different types.
     /// </summary>
     [AddComponentMenu("GameFramework/Events/Actions/Material Property Action")]
+    [ActionDefinition("material-property", "🎨", "Material Property Action", "Animates material properties like colors, floats, and vectors over time", "Visual", 90)]
     public class MaterialPropertyAction : BaseTriggerAction
     {
         [System.Serializable]
