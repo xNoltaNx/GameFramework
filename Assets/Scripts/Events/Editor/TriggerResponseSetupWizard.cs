@@ -2274,6 +2274,9 @@ namespace GameFramework.Events.Editor
                 // Create raise event action on trigger
                 CreateRaiseEventActions();
                 
+                // Connect trigger events to raise actions - CRITICAL MISSING STEP
+                ConnectTriggerToRaiseActions();
+                
                 // Create response objects and their components
                 CreateResponseObjects();
                 
@@ -2641,6 +2644,42 @@ namespace GameFramework.Events.Editor
             UnityEditor.EditorUtility.SetDirty(raiseAction);
             
             Debug.Log($"Configured RaiseGameEventAction with {gameEventsToRaise.Count} GameEvent(s)");
+        }
+        
+        private void ConnectTriggerToRaiseActions()
+        {
+            if (triggerObject == null)
+            {
+                Debug.LogError("Cannot connect trigger to raise actions - trigger object is null");
+                return;
+            }
+            
+            // Get the trigger component and raise action component
+            var trigger = triggerObject.GetComponent<BaseTrigger>();
+            var raiseAction = triggerObject.GetComponent<RaiseGameEventAction>();
+            
+            if (trigger == null)
+            {
+                Debug.LogError("No BaseTrigger component found on trigger object - cannot connect events");
+                return;
+            }
+            
+            if (raiseAction == null)
+            {
+                Debug.LogError("No RaiseGameEventAction component found on trigger object - cannot connect events");
+                return;
+            }
+            
+            // Connect trigger's onTriggered UnityEvent to RaiseGameEventAction.Execute()
+            UnityEditor.Events.UnityEventTools.AddPersistentListener(
+                trigger.onTriggered, 
+                raiseAction.Execute
+            );
+            
+            Debug.Log($"Connected {trigger.GetType().Name}.onTriggered to RaiseGameEventAction.Execute()");
+            
+            // Mark the trigger component as dirty for undo/redo
+            UnityEditor.EditorUtility.SetDirty(trigger);
         }
         
         private void CreateResponseObjects()
