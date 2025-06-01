@@ -3,7 +3,9 @@
     "rootNamespace": "GameFramework.Events.Editor",
     "references": [
         "GameFramework.Core",
-        "GameFramework.Events"
+        "GameFramework.Core.Editor",
+        "GameFramework.Events",
+        "GameFramework.Events.Templates"
     ],
     "includePlatforms": [
         "Editor"

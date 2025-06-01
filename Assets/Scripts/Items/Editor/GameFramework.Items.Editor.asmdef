@@ -1,0 +1,20 @@
+{
+    "name": "GameFramework.Items.Editor",
+    "rootNamespace": "GameFramework.Items.Editor",
+    "references": [
+        "GameFramework.Core",
+        "GameFramework.Core.Editor",
+        "GameFramework.Items"
+    ],
+    "includePlatforms": [
+        "Editor"
+    ],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

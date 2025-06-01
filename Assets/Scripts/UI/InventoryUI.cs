@@ -79,7 +79,6 @@ namespace GameFramework.UI
             }
             else
             {
-                Debug.LogWarning($"InventoryUI: Missing controllers! Inventory: {inventoryController != null}, Equipment: {equipmentController != null}, Hotbar: {hotbarController != null}");
             }
         }
         
@@ -114,7 +113,6 @@ namespace GameFramework.UI
         {
             if (inventorySlotPrefab == null || inventoryGridContainer == null)
             {
-                Debug.LogWarning("InventoryUI: inventorySlotPrefab or inventoryGridContainer not assigned!");
                 return;
             }
             
@@ -135,13 +133,11 @@ namespace GameFramework.UI
         {
             if (hotbarSlotPrefab == null || hotbarContainer == null)
             {
-                Debug.LogWarning("InventoryUI: hotbarSlotPrefab or hotbarContainer not assigned!");
                 return;
             }
             
             if (hotbarController == null)
             {
-                Debug.LogWarning("InventoryUI: hotbarController is null! Cannot initialize hotbar slots.");
                 return;
             }
             
@@ -161,28 +157,22 @@ namespace GameFramework.UI
         {
             if (equipmentSlotPrefab == null || equipmentSlotsContainer == null)
             {
-                Debug.LogWarning("InventoryUI: equipmentSlotPrefab or equipmentSlotsContainer not assigned!");
                 return;
             }
             
             if (equipmentController == null)
             {
-                Debug.LogWarning("InventoryUI: equipmentController is null! Cannot initialize equipment slots.");
                 return;
             }
             
             if (inventoryController == null)
             {
-                Debug.LogWarning("InventoryUI: inventoryController is null! Cannot initialize equipment slots.");
                 return;
             }
-            
-            Debug.Log($"[InventoryUI] Creating character equipment slots...");
             
             var equipmentSlotTypes = System.Enum.GetValues(typeof(EquipmentSlot));
             foreach (EquipmentSlot slotType in equipmentSlotTypes)
             {
-                Debug.Log($"[InventoryUI] Creating equipment slot for: {slotType}");
                 
                 GameObject slotObj = Instantiate(equipmentSlotPrefab, equipmentSlotsContainer);
                 EquipmentSlotUI slot = slotObj.GetComponent<EquipmentSlotUI>();
@@ -190,22 +180,16 @@ namespace GameFramework.UI
                 {
                     slot.Initialize(this, slotType, equipmentController, inventoryController);
                     characterEquipmentSlots.Add(slot);
-                    Debug.Log($"[InventoryUI] Successfully created equipment slot: {slotType}");
                 }
-                else
-                {
-                    Debug.LogError($"[InventoryUI] Failed to get EquipmentSlotUI component from prefab for slot: {slotType}");
-                }
+    
             }
             
-            Debug.Log($"[InventoryUI] Total character equipment slots created: {characterEquipmentSlots.Count}");
         }
         
         public void ToggleInventory()
         {
             if (inventoryPanel == null)
             {
-                Debug.LogWarning("InventoryUI: inventoryPanel is not assigned!");
                 return;
             }
             
@@ -335,11 +319,9 @@ namespace GameFramework.UI
         {
             if (hotbarSlots == null || hotbarController == null) return;
             
-            Debug.Log($"[InventoryUI] UpdateHotbar - hotbarSlots count: {hotbarSlots.Count}");
             for (int i = 0; i < hotbarSlots.Count; i++)
             {
                 var item = hotbarController.GetHotbarItem(i);
-                Debug.Log($"[InventoryUI] UpdateHotbar slot {i} - item: {item?.itemName ?? "null"}");
                 hotbarSlots[i].SetItem(item);
             }
             UpdateHotbarSelection();
@@ -350,7 +332,6 @@ namespace GameFramework.UI
             if (slotIndex >= 0 && slotIndex < hotbarSlots.Count)
             {
                 var item = hotbarController.GetHotbarItem(slotIndex);
-                Debug.Log($"[InventoryUI] OnHotbarItemChanged slot {slotIndex} - item: {item?.itemName ?? "null"}");
                 hotbarSlots[slotIndex].SetItem(item);
             }
         }
@@ -372,11 +353,9 @@ namespace GameFramework.UI
         
         private void UpdateEquipmentSlots()
         {
-            Debug.Log($"[InventoryUI] UpdateEquipmentSlots called - characterEquipmentSlots count: {characterEquipmentSlots.Count}");
             
             if (equipmentController == null)
             {
-                Debug.LogWarning("[InventoryUI] UpdateEquipmentSlots: equipmentController is null");
                 return;
             }
             
@@ -389,7 +368,6 @@ namespace GameFramework.UI
                     var slotType = equipmentSlot.SlotType;
                     string slotName = slotType.ToString(); // Convert enum to string
                     
-                    Debug.Log($"[InventoryUI] Checking equipment slot: {slotName}");
                     
                     // Get the currently equipped item for this slot
                     var equippedItemObj = equipmentController.GetEquippedItem(slotName);
@@ -397,12 +375,10 @@ namespace GameFramework.UI
                     
                     if (equippedItem != null)
                     {
-                        Debug.Log($"[InventoryUI] Found equipped item in {slotName}: {equippedItem.item.itemName}");
                         equipmentSlot.SetEquippedItem(equippedItem.item);
                     }
                     else
                     {
-                        Debug.Log($"[InventoryUI] No item equipped in slot: {slotName}");
                         equipmentSlot.SetEquippedItem(null);
                     }
                 }

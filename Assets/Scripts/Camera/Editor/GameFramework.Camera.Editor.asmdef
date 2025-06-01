@@ -4,7 +4,8 @@
     "references": [
         "Unity.Cinemachine",
         "GameFramework.Camera",
-        "GameFramework.Core"
+        "GameFramework.Core",
+        "GameFramework.Core.Editor"
     ],
     "includePlatforms": [
         "Editor"

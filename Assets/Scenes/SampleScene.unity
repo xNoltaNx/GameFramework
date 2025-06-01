@@ -1181,6 +1181,7 @@ GameObject:
   - component: {fileID: 327517488}
   - component: {fileID: 327517487}
   - component: {fileID: 327517490}
+  - component: {fileID: 327517491}
   m_Layer: 0
   m_Name: Cube (5)
   m_TagString: Untagged
@@ -1306,7 +1307,37 @@ MonoBehaviour:
           m_StringArgument: 
           m_BoolArgument: 0
         m_CallState: 2
-  debugMode: 0
+  debugMode: 1
+--- !u!114 &327517491
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 327517485}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5c909cfb69d084b41a9c13b80befdbca, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  gameEvent: {fileID: 11400000, guid: 9341a40c0a45fea47b8ddc3e10f3b68c, type: 2}
+  autoSubscribe: 1
+  onEventRaised:
+    m_PersistentCalls:
+      m_Calls:
+      - m_Target: {fileID: 327517488}
+        m_TargetAssemblyTypeName: UnityEngine.Renderer, UnityEngine
+        m_MethodName: set_material
+        m_Mode: 2
+        m_Arguments:
+          m_ObjectArgument: {fileID: 2100000, guid: a071545b123c73c4aa9dd52fc683e900, type: 2}
+          m_ObjectArgumentAssemblyTypeName: UnityEngine.Material, UnityEngine
+          m_IntArgument: 0
+          m_FloatArgument: 0
+          m_StringArgument: 
+          m_BoolArgument: 0
+        m_CallState: 2
+  debugMode: 1
 --- !u!1 &410087039
 GameObject:
   m_ObjectHideFlags: 0
@@ -2992,7 +3023,7 @@ MonoBehaviour:
   enablePerformanceMonitoring: 1
   proximityUpdateInterval: 0.1
   useUnscaledTime: 0
-  debugMode: 0
+  debugMode: 1
   showSpatialGrid: 0
 --- !u!4 &1187733237
 Transform:
@@ -4445,7 +4476,7 @@ GameObject:
   - component: {fileID: 1961220818}
   - component: {fileID: 1961220817}
   - component: {fileID: 1961220821}
-  - component: {fileID: 1961220820}
+  - component: {fileID: 1961220822}
   m_Layer: 0
   m_Name: TriggerTest
   m_TagString: Untagged
@@ -4479,7 +4510,9 @@ MonoBehaviour:
   onDisabled:
     m_PersistentCalls:
       m_Calls: []
-  debugMode: 0
+  debugMode: 1
+  showTriggerSettings: 1
+  showCollisionSettings: 1
   triggerEvent: 0
   triggerLayers:
     serializedVersion: 2
@@ -4504,7 +4537,20 @@ MonoBehaviour:
         m_CallState: 2
   onObjectExited:
     m_PersistentCalls:
-      m_Calls: []
+      m_Calls:
+      - m_Target: {fileID: 1961220822}
+        m_TargetAssemblyTypeName: GameFramework.Events.Actions.BaseTriggerAction,
+          GameFramework.Events
+        m_MethodName: Execute
+        m_Mode: 0
+        m_Arguments:
+          m_ObjectArgument: {fileID: 0}
+          m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
+          m_IntArgument: 0
+          m_FloatArgument: 0
+          m_StringArgument: 
+          m_BoolArgument: 0
+        m_CallState: 2
   onObjectStaying:
     m_PersistentCalls:
       m_Calls: []
@@ -4544,54 +4590,6 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!114 &1961220820
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1961220816}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 0445d2e26b5a7154bba4ff4f310c6cd2, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  isEnabled: 1
-  executionDelay: 0
-  stopOnDisable: 1
-  debugMode: 0
-  targetTransform: {fileID: 0}
-  targetPosition: {x: 0, y: 5, z: 0}
-  useLocalPosition: 0
-  useTargetTransform: 0
-  duration: 1
-  easingSettings:
-    easingType: 0
-    customCurve:
-      serializedVersion: 2
-      m_Curve:
-      - serializedVersion: 3
-        time: 0
-        value: 0
-        inSlope: 0
-        outSlope: 1
-        tangentMode: 0
-        weightedMode: 0
-        inWeight: 0
-        outWeight: 0
-      - serializedVersion: 3
-        time: 1
-        value: 1
-        inSlope: 1
-        outSlope: 0
-        tangentMode: 0
-        weightedMode: 0
-        inWeight: 0
-        outWeight: 0
-      m_PreInfinity: 2
-      m_PostInfinity: 2
-      m_RotationOrder: 4
-  moveRelative: 1
 --- !u!114 &1961220821
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -4609,6 +4607,24 @@ MonoBehaviour:
   stopOnDisable: 1
   debugMode: 0
   gameEvent: {fileID: 11400000, guid: dbaf3927bdcaeed4592fc9d221f4b235, type: 2}
+  createEventIfNull: 0
+--- !u!114 &1961220822
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1961220816}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: bbfee8e537e0be04fb4b2317df9dc61e, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  isEnabled: 1
+  executionDelay: 0
+  stopOnDisable: 1
+  debugMode: 0
+  gameEvent: {fileID: 11400000, guid: 9341a40c0a45fea47b8ddc3e10f3b68c, type: 2}
   createEventIfNull: 0
 --- !u!1 &1999986598
 GameObject:
@@ -5436,12 +5452,20 @@ PrefabInstance:
     serializedVersion: 3
     m_TransformParent: {fileID: 0}
     m_Modifications:
+    - target: {fileID: 338071280474339533, guid: 89e73578ec890cc42962270f7d45dc86, type: 3}
+      propertyPath: debugMode
+      value: 0
+      objectReference: {fileID: 0}
     - target: {fileID: 1632749942654807194, guid: 89e73578ec890cc42962270f7d45dc86, type: 3}
       propertyPath: inventoryUI
       value: 
       objectReference: {fileID: 315332198}
     - target: {fileID: 1934002761138129777, guid: 89e73578ec890cc42962270f7d45dc86, type: 3}
       propertyPath: debugStateTransitions
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 3334189172381471004, guid: 89e73578ec890cc42962270f7d45dc86, type: 3}
+      propertyPath: debugMode
       value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 3717906627796027250, guid: 89e73578ec890cc42962270f7d45dc86, type: 3}
@@ -5451,6 +5475,10 @@ PrefabInstance:
     - target: {fileID: 5106919921863684212, guid: 89e73578ec890cc42962270f7d45dc86, type: 3}
       propertyPath: m_Name
       value: FirstPerson_PlayerController
+      objectReference: {fileID: 0}
+    - target: {fileID: 6562553248049248162, guid: 89e73578ec890cc42962270f7d45dc86, type: 3}
+      propertyPath: debugMode
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 7670392841219672570, guid: 89e73578ec890cc42962270f7d45dc86, type: 3}
       propertyPath: m_LocalPosition.x

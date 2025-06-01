@@ -75,3 +75,104 @@ This project uses Assembly Definition files (.asmdef) for proper code organizati
 - If existing profiles found, wizard defaults to using first found profile
 - Option to create new profile or use existing one
 - Profile is automatically assigned to CinemachineCameraManager during setup
+
+## CLGF Component Identification System
+
+This project uses a **Claude Code Game Framework (CLGF)** component identification system for easy visual recognition in the Unity Inspector.
+
+### CLGF Naming Convention:
+- All custom framework components should display `CLGF: [COMPONENT_NAME]` labels
+- Use descriptive, uppercase component names (e.g., "GAME EVENT LISTENER", "AUDIO ACTION")
+- Include emoji icons for quick visual identification
+
+### Editor Color Themes:
+1. **Event Components (Blue)**: 🎧 Listeners, channels, and event-related components
+2. **Event Actions (Orange)**: 🚀 Event-raising actions and event triggers  
+3. **Object Control Actions (Green)**: 🔊 Actions that control other GameObjects (audio, animation, transform, physics, particles, lights)
+4. **Character Components (Purple)**: 🚶 Player controllers, character systems, locomotion
+5. **Camera Components (Teal)**: 📷 Camera controllers, Cinemachine managers, view systems
+6. **UI Components (Pink)**: 🎒 Inventory UI, hotbar, menus, drag systems
+7. **System Components (Red)**: 📦 Core controllers, input handlers, managers
+
+### Implementation Pattern:
+All custom components should have corresponding custom editors that inherit from `CLGFBaseEditor`:
+
+```csharp
+[CustomEditor(typeof(YourComponent))]
+public class YourComponentEditor : CLGFBaseEditor
+{
+    protected override CLGFTheme Theme => CLGFTheme.ObjectControl; // or Event, Action, etc.
+    protected override string ComponentIcon => "🎯";
+    protected override string ComponentName => "YOUR COMPONENT";
+    protected override int ComponentIconSize => 12; // Optional: customize icon size (default: 12)
+}
+```
+
+### Color Theme Specifications:
+- **Event Theme**: Light blue background, dark blue label - Events and listeners
+- **Action Theme**: Light orange background, dark orange label - Event actions and triggers
+- **ObjectControl Theme**: Light green background, dark green label - Object manipulation actions
+- **Character Theme**: Light purple background, dark purple label - Character and locomotion
+- **Camera Theme**: Light teal background, dark teal label - Camera and view systems  
+- **UI Theme**: Light pink background, dark pink label - User interface components
+- **System Theme**: Light red background, dark red label - Core systems and managers
+
+### Benefits:
+- **Instant Recognition**: Colored backgrounds and CLGF labels make framework components immediately identifiable
+- **Consistent Branding**: All framework components follow the same visual pattern
+- **Easy Maintenance**: Adding new colored components requires minimal code
+- **Professional Appearance**: Clean, consistent styling that integrates well with Unity's Inspector
+
+### Usage Examples:
+
+#### Simple Theme-Based Editor (Recommended):
+```csharp
+[CustomEditor(typeof(GameEventListener))]
+public class GameEventListenerEditor : CLGFBaseEditor
+{
+    protected override CLGFTheme Theme => CLGFTheme.Event;
+    protected override string ComponentIcon => "🎧";
+    protected override string ComponentName => "GAME EVENT LISTENER";
+}
+```
+
+#### Custom Colors (Advanced):
+```csharp
+[CustomEditor(typeof(SpecialComponent))]
+public class SpecialComponentEditor : CLGFBaseEditor
+{
+    protected override CLGFTheme Theme => CLGFTheme.Custom;
+    protected override Color CustomBackgroundColor => new Color(1f, 0.5f, 0.5f, 0.2f); // Light red
+    protected override Color CustomLabelBackgroundColor => new Color(0.8f, 0.2f, 0.2f, 0.8f); // Dark red
+    protected override string ComponentIcon => "🔥";
+    protected override string ComponentName => "SPECIAL COMPONENT";
+}
+```
+
+### Component Categories & Recommended Icons:
+- **Event Components**: 🎧 📡 📢 📻 (Listeners, channels, broadcasters)
+- **Event Actions**: 🚀 ⚡ 🎯 📤 (Event triggers and raisers)
+- **Object Control**: 🔊 🎬 📐 ⚽ 💡 ✨ (Audio, animation, transform, physics, lights, particles)
+- **Character Components**: 🚶 🏃 🧗 ✈️ (Player controllers, locomotion, character systems)
+- **Camera Components**: 📷 🎬 📳 👁️ (Camera controllers, managers, shake systems)
+- **UI Components**: 🎒 🔥 👆 🖥️ (Inventory, hotbar, drag systems, menus)
+- **System Components**: 📦 ⚔️ 🎮 🤝 (Controllers, managers, input handlers)
+
+### Icon Size Guidelines:
+- **Default Size**: 12px - Standard for most components
+- **Important Components**: 14-16px - Key framework components (listeners, core actions)
+- **Subtle Components**: 8-10px - Background/utility components
+- **Prominent Components**: 18-20px - Main system components (player controller, game manager)
+
+#### Icon Size Examples:
+```csharp
+protected override int ComponentIconSize => 16; // Game Event Listener (important)
+protected override int ComponentIconSize => 14; // Audio Action (medium importance)  
+protected override int ComponentIconSize => 10; // Particle Action (subtle effect)
+```
+
+### Migration from Old Editors:
+When updating existing custom editors, replace the old base classes:
+- Replace `BaseTriggerActionEditor` → `CLGFBaseEditor` with `Theme = CLGFTheme.Action`
+- Replace `BaseGameEventEditor` → `CLGFBaseEditor` with `Theme = CLGFTheme.Event`
+- Remove manual color definitions and use the theme system instead

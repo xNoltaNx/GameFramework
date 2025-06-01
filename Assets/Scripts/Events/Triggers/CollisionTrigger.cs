@@ -19,6 +19,10 @@ namespace GameFramework.Events.Triggers
             OnStay
         }
         
+        [Header("Inspector Display")]
+        [SerializeField] private bool showTriggerSettings = true;
+        [SerializeField] private bool showCollisionSettings = true;
+        
         [Header("Collision Settings")]
         [SerializeField] private TriggerEvent triggerEvent = TriggerEvent.OnEnter;
         [SerializeField] private LayerMask triggerLayers = -1;
@@ -54,40 +58,52 @@ namespace GameFramework.Events.Triggers
         
         private void OnTriggerEnter(Collider other)
         {
-            if (triggerEvent != TriggerEvent.OnEnter) return;
-            
             if (IsValidCollision(other))
             {
                 LogDebug($"Collision Enter: {other.name}");
                 
-                ExecuteTrigger(other.gameObject);
+                // Always fire collision events if they have listeners
                 FireCollisionEvents(other.gameObject, TriggerEvent.OnEnter);
+                
+                // Only execute main trigger logic if this is the selected trigger event
+                if (triggerEvent == TriggerEvent.OnEnter)
+                {
+                    ExecuteTrigger(other.gameObject);
+                }
             }
         }
         
         private void OnTriggerExit(Collider other)
         {
-            if (triggerEvent != TriggerEvent.OnExit) return;
-            
             if (IsValidCollision(other))
             {
                 LogDebug($"Collision Exit: {other.name}");
                 
-                ExecuteTrigger(other.gameObject);
+                // Always fire collision events if they have listeners
                 FireCollisionEvents(other.gameObject, TriggerEvent.OnExit);
+                
+                // Only execute main trigger logic if this is the selected trigger event
+                if (triggerEvent == TriggerEvent.OnExit)
+                {
+                    ExecuteTrigger(other.gameObject);
+                }
             }
         }
         
         private void OnTriggerStay(Collider other)
         {
-            if (triggerEvent != TriggerEvent.OnStay) return;
-            
             if (IsValidCollision(other))
             {
                 LogDebug($"Collision Stay: {other.name}");
                 
-                ExecuteTrigger(other.gameObject);
+                // Always fire collision events if they have listeners
                 FireCollisionEvents(other.gameObject, TriggerEvent.OnStay);
+                
+                // Only execute main trigger logic if this is the selected trigger event
+                if (triggerEvent == TriggerEvent.OnStay)
+                {
+                    ExecuteTrigger(other.gameObject);
+                }
             }
         }
         

@@ -1,0 +1,20 @@
+{
+    "name": "GameFramework.Locomotion.Editor",
+    "rootNamespace": "GameFramework.Locomotion.Editor",
+    "references": [
+        "GameFramework.Core",
+        "GameFramework.Core.Editor",
+        "GameFramework.Locomotion"
+    ],
+    "includePlatforms": [
+        "Editor"
+    ],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

@@ -12,9 +12,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 2cd9ba25a77594d4b985c11ceba028d9, type: 3}
   m_Name: PlayerExitedArea
   m_EditorClassIdentifier: 
-  channelName: Player Entered Area
+  channelName: Player Exited Area
   isActive: 1
   debugMode: 0
   description: 
-  raisedCount: 6
-  lastRaisedTime: 1.2799995
+  raisedCount: 22
+  lastRaisedTime: 23.539991

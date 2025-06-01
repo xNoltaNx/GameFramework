@@ -41,7 +41,6 @@ namespace GameFramework.UI
             if (keyText == null) keyText = GetComponentInChildren<TextMeshProUGUI>();
             if (selectionBorder == null) selectionBorder = transform.Find("SelectionBorder")?.GetComponent<Image>();
             
-            Debug.Log($"[HotbarSlot {index}] Initialize - itemIcon: {itemIcon != null}, background: {background != null}, keyText: {keyText != null}");
             
             if (keyText != null)
             {
@@ -67,11 +66,9 @@ namespace GameFramework.UI
                     itemIcon.sprite = item.icon;
                     itemIcon.color = Color.white;
                     itemIcon.gameObject.SetActive(true);
-                    Debug.Log($"[HotbarSlot {slotIndex}] Set item: {item.itemName} with icon: {(item.icon?.name ?? "null")}");
                 }
                 else
                 {
-                    Debug.LogWarning($"[HotbarSlot {slotIndex}] itemIcon is null when trying to set {item.itemName}");
                 }
             }
             else
@@ -81,12 +78,8 @@ namespace GameFramework.UI
                     itemIcon.sprite = null;
                     itemIcon.color = Color.clear;
                     itemIcon.gameObject.SetActive(false);
-                    Debug.Log($"[HotbarSlot {slotIndex}] Cleared item - sprite and color reset");
                 }
-                else
-                {
-                    Debug.LogWarning($"[HotbarSlot {slotIndex}] itemIcon is null when trying to clear item");
-                }
+               
             }
         }
         
@@ -245,10 +238,6 @@ namespace GameFramework.UI
                         hotbarController.SetHotbarItem(slotIndex, equippedItem);
                         inventoryUI.UpdateUI();
                     }
-                }
-                else
-                {
-                    Debug.LogWarning("Cannot add to hotbar - inventory full!");
                 }
             }
         }

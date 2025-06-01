@@ -1,6 +1,7 @@
 using UnityEngine;
 using UnityEditor;
 using GameFramework.Events.Channels;
+using GameFramework.Core.Editor;
 
 namespace GameFramework.Events.Editor
 {
@@ -8,8 +9,12 @@ namespace GameFramework.Events.Editor
     /// Custom editor for GameEvent channels with test functionality.
     /// </summary>
     [CustomEditor(typeof(GameEvent))]
-    public class GameEventEditor : UnityEditor.Editor
+    public class GameEventEditor : CLGFBaseEditor
     {
+        protected override CLGFTheme Theme => CLGFTheme.Event;
+        protected override string ComponentIcon => "📡";
+        protected override string ComponentName => "GAME EVENT";
+        
         private GameEvent gameEvent;
         
         private void OnEnable()
@@ -19,6 +24,13 @@ namespace GameFramework.Events.Editor
         
         public override void OnInspectorGUI()
         {
+            // Draw CLGF label at the top
+            DrawCLGFLabel();
+            
+            // Begin background area
+            Rect backgroundStartRect = GUILayoutUtility.GetRect(0, 0);
+            float backgroundStartY = backgroundStartRect.y;
+            
             // Draw default inspector
             DrawDefaultInspector();
             
@@ -33,6 +45,9 @@ namespace GameFramework.Events.Editor
             {
                 DrawEditorControls();
             }
+            
+            // Draw colored background now that we know the actual height
+            DrawColoredBackgroundActual(backgroundStartY);
         }
         
         private void DrawRuntimeControls()
@@ -75,8 +90,12 @@ namespace GameFramework.Events.Editor
     /// Custom editor for typed event channels.
     /// </summary>
     [CustomEditor(typeof(IntEventChannel))]
-    public class IntEventChannelEditor : UnityEditor.Editor
+    public class IntEventChannelEditor : CLGFBaseEditor
     {
+        protected override CLGFTheme Theme => CLGFTheme.Event;
+        protected override string ComponentIcon => "🔢";
+        protected override string ComponentName => "INT EVENT CHANNEL";
+        
         private IntEventChannel eventChannel;
         
         private void OnEnable()
@@ -86,6 +105,13 @@ namespace GameFramework.Events.Editor
         
         public override void OnInspectorGUI()
         {
+            // Draw CLGF label at the top
+            DrawCLGFLabel();
+            
+            // Begin background area
+            Rect backgroundStartRect = GUILayoutUtility.GetRect(0, 0);
+            float backgroundStartY = backgroundStartRect.y;
+            
             DrawDefaultInspector();
             
             EditorGUILayout.Space();
@@ -94,6 +120,9 @@ namespace GameFramework.Events.Editor
             {
                 DrawRuntimeControls();
             }
+            
+            // Draw colored background now that we know the actual height
+            DrawColoredBackgroundActual(backgroundStartY);
         }
         
         private void DrawRuntimeControls()
@@ -138,8 +167,12 @@ namespace GameFramework.Events.Editor
     /// Custom editor for FloatEventChannel.
     /// </summary>
     [CustomEditor(typeof(FloatEventChannel))]
-    public class FloatEventChannelEditor : UnityEditor.Editor
+    public class FloatEventChannelEditor : CLGFBaseEditor
     {
+        protected override CLGFTheme Theme => CLGFTheme.Event;
+        protected override string ComponentIcon => "🔢";
+        protected override string ComponentName => "FLOAT EVENT CHANNEL";
+        
         private FloatEventChannel eventChannel;
         
         private void OnEnable()
@@ -149,6 +182,13 @@ namespace GameFramework.Events.Editor
         
         public override void OnInspectorGUI()
         {
+            // Draw CLGF label at the top
+            DrawCLGFLabel();
+            
+            // Begin background area
+            Rect backgroundStartRect = GUILayoutUtility.GetRect(0, 0);
+            float backgroundStartY = backgroundStartRect.y;
+            
             DrawDefaultInspector();
             
             EditorGUILayout.Space();
@@ -157,6 +197,9 @@ namespace GameFramework.Events.Editor
             {
                 DrawRuntimeControls();
             }
+            
+            // Draw colored background now that we know the actual height
+            DrawColoredBackgroundActual(backgroundStartY);
         }
         
         private void DrawRuntimeControls()

@@ -1,0 +1,20 @@
+{
+    "name": "GameFramework.Interaction.Editor",
+    "rootNamespace": "GameFramework.Interaction.Editor",
+    "references": [
+        "GameFramework.Core",
+        "GameFramework.Core.Editor",
+        "GameFramework.Interaction"
+    ],
+    "includePlatforms": [
+        "Editor"
+    ],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

@@ -1,0 +1,19 @@
+{
+    "name": "GameFramework.Events.Templates.Editor",
+    "rootNamespace": "",
+    "references": [
+        "GameFramework.Core.Editor",
+        "GameFramework.Events.Templates"
+    ],
+    "includePlatforms": [
+        "Editor"
+    ],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

@@ -43,10 +43,18 @@ namespace GameFramework.Events.Actions
         public bool IsExecuting => isExecuting;
         
         /// <summary>
+        /// Execute the action without a context GameObject.
+        /// </summary>
+        public virtual void Execute()
+        {
+            Execute(null);
+        }
+        
+        /// <summary>
         /// Execute the action with the provided context.
         /// </summary>
         /// <param name="context">The context object (often the triggering GameObject)</param>
-        public virtual void Execute(GameObject context = null)
+        public virtual void Execute(GameObject context)
         {
             if (!isEnabled)
             {
