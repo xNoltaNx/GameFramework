@@ -11,6 +11,7 @@ using GameFramework.Events.Actions;
 using GameFramework.Events.Conditions;
 using GameFramework.Events.Channels;
 using GameFramework.Events.Listeners;
+using GameFramework.Core.Editor;
 
 namespace GameFramework.Events.Editor
 {
@@ -22,6 +23,7 @@ namespace GameFramework.Events.Editor
     {
         private enum WizardStep
         {
+            ProjectSetup,
             TemplateSelection,
             TriggerSetup,
             EventChannelSetup,
@@ -29,6 +31,12 @@ namespace GameFramework.Events.Editor
             ResponseObjectSetup,
             Review,
             Complete
+        }
+        
+        private enum CreationMode
+        {
+            SceneObjects,
+            Prefabs
         }
         
         [MenuItem("GameFramework/Events/Complete Interaction Setup Wizard")]
@@ -39,7 +47,7 @@ namespace GameFramework.Events.Editor
         }
         
         // Wizard state
-        private WizardStep currentStep = WizardStep.TemplateSelection;
+        private WizardStep currentStep = WizardStep.ProjectSetup;
         private Vector2 scrollPosition;
         
         // Template system
@@ -49,6 +57,8 @@ namespace GameFramework.Events.Editor
         
         // Configuration data
         private GameObject triggerObject;
+        private bool createNewTriggerObject = false;
+        private string newTriggerObjectName = "New Trigger";
         private TriggerConfig triggerConfig = new TriggerConfig();
         private List<EventChannelConfig> eventChannelConfigs = new List<EventChannelConfig>();
         private List<ConditionConfig> conditionConfigs = new List<ConditionConfig>();
@@ -58,6 +68,13 @@ namespace GameFramework.Events.Editor
         private float cooldownTime = 0f;
         private bool debugMode = false;
         
+        // Project setup configuration
+        private string projectName = "NewInteractionProject";
+        private CreationMode creationMode = CreationMode.SceneObjects;
+        private bool useExistingProjectFolder = false;
+        private string selectedProjectFolderPath = "";
+        private string[] existingProjectFolders = new string[0];
+        
         // UI state
         private string searchFilter = "";
         private string selectedCategory = "All";
@@ -66,6 +83,7 @@ namespace GameFramework.Events.Editor
         private void OnEnable()
         {
             LoadAvailableTemplates();
+            LoadExistingProjectFolders();
         }
         
         private void OnGUI()
@@ -106,6 +124,9 @@ namespace GameFramework.Events.Editor
             // Draw the step content
             switch (currentStep)
             {
+                case WizardStep.ProjectSetup:
+                    DrawProjectSetup();
+                    break;
                 case WizardStep.TemplateSelection:
                     DrawTemplateSelection();
                     break;
@@ -163,34 +184,70 @@ namespace GameFramework.Events.Editor
             }
         }
         
+        private CLGFBaseEditor.CLGFTheme GetStepTheme(WizardStep step)
+        {
+            return step switch
+            {
+                WizardStep.ProjectSetup => CLGFBaseEditor.CLGFTheme.UI,
+                WizardStep.TemplateSelection => CLGFBaseEditor.CLGFTheme.System,
+                WizardStep.TriggerSetup => CLGFBaseEditor.CLGFTheme.Action,
+                WizardStep.EventChannelSetup => CLGFBaseEditor.CLGFTheme.Event,
+                WizardStep.ConditionSetup => CLGFBaseEditor.CLGFTheme.Action,
+                WizardStep.ResponseObjectSetup => CLGFBaseEditor.CLGFTheme.ObjectControl,
+                WizardStep.Review => CLGFBaseEditor.CLGFTheme.System,
+                WizardStep.Complete => CLGFBaseEditor.CLGFTheme.System,
+                _ => CLGFBaseEditor.CLGFTheme.System
+            };
+        }
+        
+        private (Color background, Color border, Color label) GetCLGFThemeColors(CLGFBaseEditor.CLGFTheme theme)
+        {
+            return theme switch
+            {
+                CLGFBaseEditor.CLGFTheme.Event => 
+                    (new Color(0.3f, 0.7f, 0.9f, 0.05f), new Color(0.3f, 0.7f, 0.9f, 0.8f), new Color(0.2f, 0.6f, 0.8f, 0.8f)),
+                CLGFBaseEditor.CLGFTheme.Action => 
+                    (new Color(0.9f, 0.7f, 0.3f, 0.05f), new Color(0.9f, 0.7f, 0.3f, 0.8f), new Color(0.8f, 0.6f, 0.2f, 0.8f)),
+                CLGFBaseEditor.CLGFTheme.ObjectControl => 
+                    (new Color(0.3f, 0.9f, 0.4f, 0.05f), new Color(0.3f, 0.9f, 0.4f, 0.8f), new Color(0.2f, 0.7f, 0.3f, 0.8f)),
+                CLGFBaseEditor.CLGFTheme.Character => 
+                    (new Color(0.8f, 0.4f, 0.9f, 0.05f), new Color(0.8f, 0.4f, 0.9f, 0.8f), new Color(0.7f, 0.3f, 0.8f, 0.8f)),
+                CLGFBaseEditor.CLGFTheme.Camera => 
+                    (new Color(0.4f, 0.9f, 0.8f, 0.05f), new Color(0.4f, 0.9f, 0.8f, 0.8f), new Color(0.3f, 0.8f, 0.7f, 0.8f)),
+                CLGFBaseEditor.CLGFTheme.UI => 
+                    (new Color(0.9f, 0.5f, 0.7f, 0.05f), new Color(0.9f, 0.5f, 0.7f, 0.8f), new Color(0.8f, 0.4f, 0.6f, 0.8f)),
+                CLGFBaseEditor.CLGFTheme.System => 
+                    (new Color(0.9f, 0.3f, 0.3f, 0.05f), new Color(0.9f, 0.3f, 0.3f, 0.8f), new Color(0.8f, 0.2f, 0.2f, 0.8f)),
+                _ => (Color.gray, Color.white, Color.black)
+            };
+        }
+        
         private Color GetCurrentStepBackgroundColor()
         {
-            return currentStep switch
+            var theme = GetStepTheme(currentStep);
+            var colors = GetCLGFThemeColors(theme);
+            
+            // Special case for Review step - make background transparent
+            if (currentStep == WizardStep.Review)
             {
-                WizardStep.TemplateSelection => new Color(0.9f, 0.3f, 0.3f, 0.05f), // System (Red)
-                WizardStep.TriggerSetup => new Color(0.9f, 0.7f, 0.3f, 0.05f),      // Action (Orange)
-                WizardStep.EventChannelSetup => new Color(0.3f, 0.7f, 0.9f, 0.05f), // Event (Blue)
-                WizardStep.ConditionSetup => new Color(0.9f, 0.7f, 0.3f, 0.05f),    // Action (Orange)
-                WizardStep.ResponseObjectSetup => new Color(0.3f, 0.9f, 0.4f, 0.05f), // ObjectControl (Green)
-                WizardStep.Review => new Color(0.9f, 0.3f, 0.3f, 0.00f),            // System (Red)
-                WizardStep.Complete => new Color(0.9f, 0.3f, 0.3f, 0.05f),          // System (Red)
-                _ => Color.gray
-            };
+                return new Color(colors.background.r, colors.background.g, colors.background.b, 0.0f);
+            }
+            
+            return colors.background;
         }
         
         private Color GetCurrentStepBorderColor()
         {
-            return currentStep switch
+            var theme = GetStepTheme(currentStep);
+            var colors = GetCLGFThemeColors(theme);
+            
+            // Special case for Review step - make border transparent  
+            if (currentStep == WizardStep.Review)
             {
-                WizardStep.TemplateSelection => new Color(0.9f, 0.3f, 0.3f, 0.3f), // System (Red)
-                WizardStep.TriggerSetup => new Color(0.9f, 0.7f, 0.3f, 0.3f),      // Action (Orange)
-                WizardStep.EventChannelSetup => new Color(0.3f, 0.7f, 0.9f, 0.3f), // Event (Blue)
-                WizardStep.ConditionSetup => new Color(0.9f, 0.7f, 0.3f, 0.3f),    // Action (Orange)
-                WizardStep.ResponseObjectSetup => new Color(0.3f, 0.9f, 0.4f, 0.3f), // ObjectControl (Green)
-                WizardStep.Review => new Color(0.9f, 0.3f, 0.3f, 0.0f),            // System (Red)
-                WizardStep.Complete => new Color(0.9f, 0.3f, 0.3f, 0.3f),          // System (Red)
-                _ => Color.white
-            };
+                return new Color(colors.border.r, colors.border.g, colors.border.b, 0.0f);
+            }
+            
+            return colors.border;
         }
         
         #region Header and Navigation
@@ -330,7 +387,7 @@ namespace GameFramework.Events.Editor
             GUILayout.BeginHorizontal();
             GUILayout.FlexibleSpace();
             
-            var steps = new[] { "Template", "Trigger", "Events", "Conditions", "Responses", "Review", "Complete" };
+            var steps = new[] { "Project Setup", "Template", "Trigger", "Events", "Conditions", "Responses", "Review", "Complete" };
             var stepColors = GetStepColors();
             
             for (int i = 0; i < steps.Length; i++)
@@ -343,46 +400,45 @@ namespace GameFramework.Events.Editor
                 Color stepColor = stepColors[i];
                 
                 // Scale up current step button
-                float buttonWidth = isActive ? 140 : 75;
+                float buttonWidth = isActive ? 140 : 90;
                 float buttonHeight = isActive ? 35 : 25;
                 
-                GUIStyle stepStyle = new GUIStyle(EditorStyles.miniButton)
+                // Draw colored background rect directly for maximum vibrancy
+                Rect buttonRect = GUILayoutUtility.GetRect(buttonWidth, buttonHeight);
+                
+                // Check if mouse is hovering over this button
+                bool isHovering = buttonRect.Contains(Event.current.mousePosition) && canNavigateTo;
+                
+                // Get ultra-vibrant color for this step with hover state
+                Color buttonColor = GetUltraVibrantStepColor((WizardStep)i, isActive, isCompleted, canNavigateTo, isHovering);
+                EditorGUI.DrawRect(buttonRect, buttonColor);
+                
+                // Create transparent button style for text/click handling
+                GUIStyle stepStyle = new GUIStyle(EditorStyles.label)
                 {
                     fixedWidth = buttonWidth,
                     fixedHeight = buttonHeight,
-                    normal = { textColor = isActive ? Color.white : (canNavigateTo ? Color.white : Color.gray) },
+                    normal = { textColor = Color.white },
                     fontStyle = isActive ? FontStyle.Bold : FontStyle.Normal,
-                    fontSize = isActive ? 16 : 12
+                    fontSize = isActive ? 16 : 12,
+                    alignment = TextAnchor.MiddleCenter
                 };
                 
-                // Set background color based on step type and state
-                if (isActive)
-                {
-                    // Brighter version for selected step
-                    GUI.backgroundColor = Color.Lerp(stepColor, Color.white, 0.2f);
-                }
-                else if (isCompleted)
-                {
-                    // Darker, more saturated version for completed steps
-                    GUI.backgroundColor = Color.Lerp(stepColor, Color.black, 0.2f);
-                }
-                else if (canNavigateTo)
-                {
-                    // Darker, more saturated version for unpressed available steps
-                    GUI.backgroundColor = Color.Lerp(stepColor, Color.black, 0.3f);
-                }
-                else
-                {
-                    GUI.backgroundColor = Color.gray;
-                }
+                // Draw text label over the colored rect
+                GUI.Label(buttonRect, steps[i], stepStyle);
                 
-                // Make button clickable for navigation
-                if (GUILayout.Button(steps[i], stepStyle) && canNavigateTo)
+                // Handle click detection
+                if (Event.current.type == EventType.MouseDown && buttonRect.Contains(Event.current.mousePosition) && canNavigateTo)
                 {
                     NavigateToStep((WizardStep)i);
+                    Event.current.Use();
                 }
                 
-                GUI.backgroundColor = Color.white;
+                // Repaint on hover state changes for smooth visual feedback
+                if (isHovering)
+                {
+                    Repaint();
+                }
                 
                 if (i < steps.Length - 1)
                 {
@@ -398,19 +454,80 @@ namespace GameFramework.Events.Editor
             DrawColorLegend();
         }
         
+        private Color GetUltraVibrantStepColor(WizardStep step, bool isActive, bool isCompleted, bool canNavigateTo, bool isHovering = false)
+        {
+            // Get the exact CLGF theme color for this step
+            var theme = GetStepTheme(step);
+            var themeColors = GetCLGFThemeColors(theme);
+            
+            // Use the exact border color from CLGF theme but force full alpha for maximum vibrancy
+            Color baseColor = new Color(
+                themeColors.border.r,
+                themeColors.border.g, 
+                themeColors.border.b,
+                1.0f); // Force full alpha for vibrancy
+            
+            Color finalColor;
+            
+            if (isActive)
+            {
+                // Active button: Use exact CLGF border color with full alpha
+                finalColor = baseColor;
+            }
+            else if (isCompleted)
+            {
+                // Completed: Darker but still recognizable as the theme color
+                finalColor = Color.Lerp(baseColor, Color.black, 0.3f);
+            }
+            else if (canNavigateTo)
+            {
+                // Available: Much darker version of the theme color
+                finalColor = Color.Lerp(baseColor, Color.black, 0.5f);
+            }
+            else
+            {
+                // Disabled: Gray
+                finalColor = new Color(0.1f, 0.1f, 0.1f, 1.0f);
+            }
+            
+            // Apply hover effect: make any button darker when hovered
+            if (isHovering && canNavigateTo)
+            {
+                finalColor = Color.Lerp(finalColor, Color.black, 0.2f);
+            }
+            
+            return finalColor;
+        }
+        
         private Color[] GetStepColors()
         {
-            // Map each step to vibrant CLGF theme colors
-            return new Color[]
+            // Map each step to vibrant CLGF theme colors using centralized color system
+            var stepThemes = new CLGFBaseEditor.CLGFTheme[]
             {
-                new Color(1.0f, 0.3f, 0.2f, 0.9f), // Template - Vibrant System (Red)
-                new Color(1.0f, 0.6f, 0.1f, 0.9f), // Trigger - Vibrant Action (Orange) 
-                new Color(0.2f, 0.6f, 1.0f, 0.9f), // Events - Vibrant Event (Blue)
-                new Color(1.0f, 0.6f, 0.1f, 0.9f), // Conditions - Vibrant Action (Orange)
-                new Color(0.2f, 0.8f, 0.3f, 0.9f), // Responses - Vibrant ObjectControl (Green)
-                new Color(0.7f, 0.3f, 0.9f, 0.9f), // Review - Vibrant Character (Purple)
-                new Color(1.0f, 0.3f, 0.2f, 0.9f)  // Complete - Vibrant System (Red)
+                CLGFBaseEditor.CLGFTheme.UI,            // Project Setup
+                CLGFBaseEditor.CLGFTheme.System,        // Template
+                CLGFBaseEditor.CLGFTheme.Action,        // Trigger  
+                CLGFBaseEditor.CLGFTheme.Event,         // Events
+                CLGFBaseEditor.CLGFTheme.Action,        // Conditions
+                CLGFBaseEditor.CLGFTheme.ObjectControl, // Responses
+                CLGFBaseEditor.CLGFTheme.Character,     // Review (keep purple for visual distinction)
+                CLGFBaseEditor.CLGFTheme.System         // Complete
             };
+            
+            var colors = new Color[stepThemes.Length];
+            for (int i = 0; i < stepThemes.Length; i++)
+            {
+                var themeColors = GetCLGFThemeColors(stepThemes[i]);
+                // Create vibrant version by increasing saturation and opacity
+                var baseColor = themeColors.border; // Use border color as base for vibrancy
+                colors[i] = new Color(
+                    Mathf.Min(1.0f, baseColor.r * 1.2f), 
+                    Mathf.Min(1.0f, baseColor.g * 1.2f), 
+                    Mathf.Min(1.0f, baseColor.b * 1.2f), 
+                    0.9f); // High opacity for navigation buttons
+            }
+            
+            return colors;
         }
         
         private void DrawColorLegend()
@@ -444,9 +561,10 @@ namespace GameFramework.Events.Editor
             // Check if the step has been completed based on required data
             return step switch
             {
-                WizardStep.TemplateSelection => true, // Always accessible
+                WizardStep.ProjectSetup => true, // Always accessible first step
+                WizardStep.TemplateSelection => (useExistingProjectFolder && !string.IsNullOrEmpty(selectedProjectFolderPath)) || (!useExistingProjectFolder && !string.IsNullOrEmpty(projectName.Trim())),
                 WizardStep.TriggerSetup => !useTemplate || selectedTemplate != null,
-                WizardStep.EventChannelSetup => triggerObject != null,
+                WizardStep.EventChannelSetup => triggerObject != null || (createNewTriggerObject && !string.IsNullOrEmpty(newTriggerObjectName.Trim())),
                 WizardStep.ConditionSetup => eventChannelConfigs.Count > 0,
                 WizardStep.ResponseObjectSetup => true, // Conditions are optional
                 WizardStep.Review => responseObjectConfigs.Count > 0,
@@ -508,6 +626,129 @@ namespace GameFramework.Events.Editor
         #endregion
         
         #region Step Implementation
+        
+        private void DrawProjectSetup()
+        {
+            GUIStyle titleStyle = new GUIStyle(EditorStyles.boldLabel)
+            {
+                fontSize = 16
+            };
+            EditorGUILayout.LabelField("🎯 Project Setup", titleStyle);
+            
+            EditorGUILayout.Space(10); // Extra buffer
+            
+            DrawThemedHelpBox("Configure your project settings to organize assets and choose how objects are created.");
+            
+            // Creation Mode Selection
+            EditorGUILayout.LabelField("Creation Mode", EditorStyles.boldLabel);
+            EditorGUILayout.Space(3);
+            
+            EditorGUILayout.BeginHorizontal();
+            EditorGUILayout.LabelField("Object Type:", GUILayout.Width(80));
+
+            if (GUILayout.Toggle(creationMode == CreationMode.SceneObjects, "🌍 Scene Objects", EditorStyles.miniButtonLeft, GUILayout.Width(120)))
+            {
+                creationMode = CreationMode.SceneObjects;
+            }
+
+            if (GUILayout.Toggle(creationMode == CreationMode.Prefabs, "📦 Prefabs", EditorStyles.miniButtonRight, GUILayout.Width(100)))
+            {
+                creationMode = CreationMode.Prefabs;
+            }
+
+            EditorGUILayout.EndHorizontal();
+            EditorGUILayout.Space(3);
+            
+            // Mode description
+            if (creationMode == CreationMode.SceneObjects)
+            {
+                EditorGUILayout.LabelField("🌍 Creating objects directly in the scene", EditorStyles.miniLabel);
+                EditorGUILayout.HelpBox("Response objects will be created as GameObjects in the current scene.", MessageType.Info);
+            }
+            else
+            {
+                EditorGUILayout.LabelField("📦 Creating prefab assets in project", EditorStyles.miniLabel);
+                EditorGUILayout.HelpBox("Response objects will be created as prefab assets in the project folder structure.", MessageType.Info);
+            }
+            
+            EditorGUILayout.Space(15);
+            
+            // Project Organization
+            EditorGUILayout.LabelField("Project Organization", EditorStyles.boldLabel);
+            EditorGUILayout.Space(3);
+            
+            // Project folder mode selection
+            EditorGUILayout.BeginHorizontal();
+            EditorGUILayout.LabelField("Project Mode:", GUILayout.Width(80));
+
+            if (GUILayout.Toggle(!useExistingProjectFolder, "✨ Create New", EditorStyles.miniButtonLeft, GUILayout.Width(100)))
+            {
+                if (useExistingProjectFolder)
+                {
+                    useExistingProjectFolder = false;
+                    selectedProjectFolderPath = "";
+                }
+            }
+
+            if (GUILayout.Toggle(useExistingProjectFolder, "📂 Use Existing", EditorStyles.miniButtonRight, GUILayout.Width(100)))
+            {
+                if (!useExistingProjectFolder)
+                {
+                    useExistingProjectFolder = true;
+                }
+            }
+
+            EditorGUILayout.EndHorizontal();
+            EditorGUILayout.Space(3);
+            
+            // Project-specific UI
+            if (!useExistingProjectFolder)
+            {
+                EditorGUILayout.LabelField("✨ Creating New Project", EditorStyles.miniLabel);
+                
+                projectName = EditorGUILayout.TextField(
+                    new GUIContent("Project Name", "Name for the new project folder (will contain Events, Triggers, etc.)"),
+                    projectName);
+                    
+                if (string.IsNullOrEmpty(projectName.Trim()))
+                {
+                    EditorGUILayout.HelpBox("Please enter a project name to continue.", MessageType.Warning);
+                }
+                else
+                {
+                    var cleanProjectName = projectName.Trim();
+                    EditorGUILayout.HelpBox($"Assets will be organized as: Events/{cleanProjectName}/[EventName], etc.", MessageType.Info);
+                }
+            }
+            else
+            {
+                EditorGUILayout.LabelField("📂 Use Existing Project", EditorStyles.miniLabel);
+                
+                if (existingProjectFolders.Length > 0)
+                {
+                    int selectedIndex = System.Array.IndexOf(existingProjectFolders, selectedProjectFolderPath);
+                    if (selectedIndex < 0) selectedIndex = 0;
+                    
+                    selectedIndex = EditorGUILayout.Popup(
+                        new GUIContent("Existing Project", "Select an existing project folder"),
+                        selectedIndex, existingProjectFolders);
+                        
+                    if (selectedIndex >= 0 && selectedIndex < existingProjectFolders.Length)
+                    {
+                        selectedProjectFolderPath = existingProjectFolders[selectedIndex];
+                    }
+                    
+                    if (!string.IsNullOrEmpty(selectedProjectFolderPath))
+                    {
+                        EditorGUILayout.HelpBox($"Using existing project: {selectedProjectFolderPath}", MessageType.Info);
+                    }
+                }
+                else
+                {
+                    EditorGUILayout.HelpBox("No existing project folders found. Switch to 'Create New' to create your first project.", MessageType.Warning);
+                }
+            }
+        }
         
         private void DrawTemplateSelection()
         {
@@ -658,15 +899,61 @@ namespace GameFramework.Events.Editor
             
             EditorGUILayout.Space(10); // Extra buffer
 
-            // Trigger object selection
-            triggerObject = (GameObject)EditorGUILayout.ObjectField(
-                new GUIContent("Trigger GameObject", "The GameObject that will start the interaction (receives trigger components)"),
-                triggerObject, typeof(GameObject), true);
-                
-            if (triggerObject == null)
+            // Trigger mode selection - matching events/responses visual pattern
+            EditorGUILayout.BeginHorizontal();
+            EditorGUILayout.LabelField("Trigger Mode:", GUILayout.Width(80));
+
+            if (GUILayout.Toggle(createNewTriggerObject, "✨ Create New", EditorStyles.miniButtonLeft, GUILayout.Width(100)))
             {
-                EditorGUILayout.HelpBox("Please select a trigger GameObject to continue.", MessageType.Warning);
-                return;
+                if (!createNewTriggerObject)
+                {
+                    createNewTriggerObject = true;
+                    triggerObject = null;
+                }
+            }
+
+            if (GUILayout.Toggle(!createNewTriggerObject, "📂 Use Existing", EditorStyles.miniButtonRight, GUILayout.Width(100)))
+            {
+                if (createNewTriggerObject)
+                {
+                    createNewTriggerObject = false;
+                }
+            }
+
+            EditorGUILayout.EndHorizontal();
+            EditorGUILayout.Space(3);
+
+            // Mode-specific UI with mini labels
+            if (createNewTriggerObject)
+            {
+                EditorGUILayout.LabelField("✨ Creating New GameObject", EditorStyles.miniLabel);
+                
+                newTriggerObjectName = EditorGUILayout.TextField(
+                    new GUIContent("GameObject Name", "Name for the new trigger GameObject"),
+                    newTriggerObjectName);
+                    
+                if (string.IsNullOrEmpty(newTriggerObjectName.Trim()))
+                {
+                    EditorGUILayout.HelpBox("Please enter a name for the new GameObject.", MessageType.Warning);
+                    return;
+                }
+                
+                // Show a helpful note about what will be created
+                EditorGUILayout.HelpBox($"A new GameObject named '{newTriggerObjectName}' will be created in the scene and configured as your trigger.", MessageType.Info);
+            }
+            else
+            {
+                EditorGUILayout.LabelField("📂 Use Existing GameObject", EditorStyles.miniLabel);
+                
+                triggerObject = (GameObject)EditorGUILayout.ObjectField(
+                    new GUIContent("Trigger GameObject", "The GameObject that will start the interaction (receives trigger components)"),
+                    triggerObject, typeof(GameObject), true);
+                    
+                if (triggerObject == null)
+                {
+                    EditorGUILayout.HelpBox("Please select a trigger GameObject to continue.", MessageType.Warning);
+                    return;
+                }
             }
             
             EditorGUILayout.Space(10);
@@ -1721,6 +2008,51 @@ namespace GameFramework.Events.Editor
             }
         }
         
+        private void LoadExistingProjectFolders()
+        {
+            var projectFolders = new List<string>();
+            
+            // Look for existing project folders in Events directory
+            string eventsPath = "Assets/Events";
+            if (AssetDatabase.IsValidFolder(eventsPath))
+            {
+                string[] subFolders = AssetDatabase.GetSubFolders(eventsPath);
+                foreach (string folder in subFolders)
+                {
+                    // Extract just the folder name from the full path
+                    string folderName = System.IO.Path.GetFileName(folder);
+                    projectFolders.Add(folderName);
+                }
+            }
+            
+            // Look for existing project folders in other common directories that might contain organized GameFramework assets
+            string[] commonBasePaths = { "Assets/GameFramework/Events", "Assets/Content/Events" };
+            
+            foreach (string basePath in commonBasePaths)
+            {
+                if (AssetDatabase.IsValidFolder(basePath))
+                {
+                    string[] subFolders = AssetDatabase.GetSubFolders(basePath);
+                    foreach (string folder in subFolders)
+                    {
+                        string folderName = System.IO.Path.GetFileName(folder);
+                        if (!projectFolders.Contains(folderName))
+                        {
+                            projectFolders.Add(folderName);
+                        }
+                    }
+                }
+            }
+            
+            existingProjectFolders = projectFolders.ToArray();
+            
+            // If we have existing folders and no selection, default to the first one
+            if (existingProjectFolders.Length > 0 && string.IsNullOrEmpty(selectedProjectFolderPath))
+            {
+                selectedProjectFolderPath = existingProjectFolders[0];
+            }
+        }
+        
         private void LoadTemplateConfiguration()
         {
             if (selectedTemplate == null) return;
@@ -1836,8 +2168,9 @@ namespace GameFramework.Events.Editor
         {
             return currentStep switch
             {
+                WizardStep.ProjectSetup => (useExistingProjectFolder && !string.IsNullOrEmpty(selectedProjectFolderPath)) || (!useExistingProjectFolder && !string.IsNullOrEmpty(projectName.Trim())),
                 WizardStep.TemplateSelection => !useTemplate || selectedTemplate != null,
-                WizardStep.TriggerSetup => triggerObject != null,
+                WizardStep.TriggerSetup => triggerObject != null || (createNewTriggerObject && !string.IsNullOrEmpty(newTriggerObjectName.Trim())),
                 WizardStep.EventChannelSetup => eventChannelConfigs.Count > 0,
                 WizardStep.ConditionSetup => true, // Conditions are optional
                 WizardStep.ResponseObjectSetup => responseObjectConfigs.Count > 0,
@@ -1885,6 +2218,25 @@ namespace GameFramework.Events.Editor
         
         private void ApplySetup()
         {
+            // Create new GameObject if requested
+            if (createNewTriggerObject && triggerObject == null)
+            {
+                triggerObject = new GameObject(newTriggerObjectName.Trim());
+                
+                // Place the new object at the origin or scene view center
+                var sceneView = SceneView.lastActiveSceneView;
+                if (sceneView != null)
+                {
+                    triggerObject.transform.position = sceneView.pivot;
+                }
+                
+                // Register undo for the new GameObject creation
+                Undo.RegisterCreatedObjectUndo(triggerObject, "Create Trigger GameObject");
+                
+                // Select the new object in the hierarchy
+                Selection.activeGameObject = triggerObject;
+            }
+            
             if (triggerObject == null)
             {
                 EditorUtility.DisplayDialog("Error", "No trigger GameObject selected.", "OK");
@@ -2344,17 +2696,43 @@ namespace GameFramework.Events.Editor
             {
                 GameObject responseObject = new GameObject(responseConfig.objectName);
                 
-                // Position it near the trigger object if possible
-                if (triggerObject != null)
+                if (creationMode == CreationMode.SceneObjects)
                 {
-                    Vector3 offset = new Vector3(2f, 0f, 0f); // Place 2 units to the right of trigger
-                    responseObject.transform.position = triggerObject.transform.position + offset;
+                    // Create object in scene (original behavior)
+                    // Position it near the trigger object if possible
+                    if (triggerObject != null)
+                    {
+                        Vector3 offset = new Vector3(2f, 0f, 0f); // Place 2 units to the right of trigger
+                        responseObject.transform.position = triggerObject.transform.position + offset;
+                    }
+                    
+                    // Register undo for the creation
+                    Undo.RegisterCreatedObjectUndo(responseObject, $"Create Response Object: {responseConfig.objectName}");
+                    
+                    Debug.Log($"Created new response object in scene: {responseConfig.objectName}");
+                }
+                else // CreationMode.Prefabs
+                {
+                    // Create as prefab asset
+                    string prefabPath = GetResponseObjectPrefabPath(responseConfig.objectName);
+                    
+                    // Ensure the directory exists
+                    string directory = System.IO.Path.GetDirectoryName(prefabPath);
+                    if (!System.IO.Directory.Exists(directory))
+                    {
+                        System.IO.Directory.CreateDirectory(directory);
+                    }
+                    
+                    // Create prefab asset
+                    GameObject prefab = PrefabUtility.SaveAsPrefabAsset(responseObject, prefabPath);
+                    
+                    // Destroy the temporary scene object and use the prefab reference
+                    UnityEngine.Object.DestroyImmediate(responseObject);
+                    responseObject = prefab;
+                    
+                    Debug.Log($"Created new response object as prefab: {prefabPath}");
                 }
                 
-                // Register undo for the creation
-                Undo.RegisterCreatedObjectUndo(responseObject, $"Create Response Object: {responseConfig.objectName}");
-                
-                Debug.Log($"Created new response object: {responseConfig.objectName}");
                 return responseObject;
             }
             catch (System.Exception e)
@@ -2362,6 +2740,40 @@ namespace GameFramework.Events.Editor
                 Debug.LogError($"Exception creating response object '{responseConfig.objectName}': {e.Message}");
                 return null;
             }
+        }
+        
+        private string GetCurrentProjectFolderName()
+        {
+            // Use existing project folder or new project name
+            if (useExistingProjectFolder && !string.IsNullOrEmpty(selectedProjectFolderPath))
+            {
+                return selectedProjectFolderPath.Replace(" ", "_").Replace("/", "_").Replace("\\", "_");
+            }
+            else if (!string.IsNullOrEmpty(projectName))
+            {
+                return projectName.Trim().Replace(" ", "_").Replace("/", "_").Replace("\\", "_");
+            }
+            
+            // Fallback to default organization
+            return "Default";
+        }
+        
+        private string GetResponseObjectPrefabPath(string objectName)
+        {
+            // Clean the object name for use as filename
+            string cleanObjectName = objectName.Replace(" ", "_").Replace("/", "_").Replace("\\", "_");
+            
+            // Create path with project-level organization: ResponseObjects > Project > ObjectName
+            string basePath = "Assets/Content/ResponseObjects";
+            
+            // Add project-level organization
+            string projectFolderName = GetCurrentProjectFolderName();
+            if (!string.IsNullOrEmpty(projectFolderName))
+            {
+                basePath = $"{basePath}/{projectFolderName}";
+            }
+            
+            return $"{basePath}/{cleanObjectName}.prefab";
         }
         
         private GameObject FindExistingResponseObject(ResponseObjectConfig responseConfig)
