@@ -16,7 +16,7 @@ namespace GameFramework.Events.Listeners
         [SerializeField] private bool autoSubscribe = true;
         
         [Header("Response")]
-        [SerializeField] private UnityEvent onEventRaised;
+        [SerializeField] private UnityEvent onEventRaised = new UnityEvent();
         
         [Header("Debug")]
         [SerializeField] private bool debugMode = false;

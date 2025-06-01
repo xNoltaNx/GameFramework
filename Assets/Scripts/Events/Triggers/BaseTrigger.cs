@@ -22,9 +22,9 @@ namespace GameFramework.Events.Triggers
         [SerializeField] protected bool requireAllConditions = true;
         
         [Header("Unity Events")]
-        [SerializeField] protected UnityEvent onTriggered;
-        [SerializeField] protected UnityEvent onEnabled;
-        [SerializeField] protected UnityEvent onDisabled;
+        [SerializeField] protected UnityEvent onTriggered = new UnityEvent();
+        [SerializeField] protected UnityEvent onEnabled = new UnityEvent();
+        [SerializeField] protected UnityEvent onDisabled = new UnityEvent();
         
         [Header("Debug")]
         [SerializeField] protected bool debugMode = false;
@@ -65,6 +65,11 @@ namespace GameFramework.Events.Triggers
         /// The GameObject that owns this trigger.
         /// </summary>
         public GameObject TriggerSource => gameObject;
+        
+        /// <summary>
+        /// Public access to the Unity event that fires when the trigger is activated.
+        /// </summary>
+        public UnityEvent OnTriggeredEvent => onTriggered;
         
         /// <summary>
         /// Enable the trigger.

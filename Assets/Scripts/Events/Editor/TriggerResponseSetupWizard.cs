@@ -2670,16 +2670,32 @@ namespace GameFramework.Events.Editor
                 return;
             }
             
-            // Connect trigger's onTriggered UnityEvent to RaiseGameEventAction.Execute()
-            UnityEditor.Events.UnityEventTools.AddPersistentListener(
-                trigger.onTriggered, 
-                raiseAction.Execute
-            );
+            // Check if OnTriggeredEvent property is accessible
+            var triggeredEvent = trigger.OnTriggeredEvent;
+            if (triggeredEvent == null)
+            {
+                Debug.LogError("OnTriggeredEvent property returned null - cannot connect events");
+                return;
+            }
             
-            Debug.Log($"Connected {trigger.GetType().Name}.onTriggered to RaiseGameEventAction.Execute()");
-            
-            // Mark the trigger component as dirty for undo/redo
-            UnityEditor.EditorUtility.SetDirty(trigger);
+            // Connect trigger's OnTriggeredEvent UnityEvent to RaiseGameEventAction.Execute()
+            try
+            {
+                UnityEditor.Events.UnityEventTools.AddPersistentListener(
+                    triggeredEvent, 
+                    raiseAction.Execute
+                );
+                
+                Debug.Log($"Connected {trigger.GetType().Name}.OnTriggeredEvent to RaiseGameEventAction.Execute()");
+                
+                // Mark the trigger component as dirty for undo/redo
+                UnityEditor.EditorUtility.SetDirty(trigger);
+            }
+            catch (System.Exception e)
+            {
+                Debug.LogError($"Exception while connecting trigger events: {e.Message}");
+                Debug.LogException(e);
+            }
         }
         
         private void CreateResponseObjects()
@@ -2954,27 +2970,66 @@ namespace GameFramework.Events.Editor
             try
             {
                 var listeners = responseObject.GetComponents<GameEventListener>();
+                Debug.Log($"Found {listeners.Length} GameEventListener(s) on {responseObject.name}");
+                
+                if (listeners.Length == 0)
+                {
+                    Debug.LogWarning($"No GameEventListener components found on {responseObject.name} - actions will not be connected");
+                    return;
+                }
+                
+                int connectionsCount = 0;
                 
                 foreach (var listener in listeners)
                 {
-                    if (listener.GameEvent == null) continue;
+                    if (listener.GameEvent == null)
+                    {
+                        Debug.LogWarning($"GameEventListener on {responseObject.name} has null GameEvent - skipping");
+                        continue;
+                    }
                     
                     // Check if this listener is for an event this response object should listen to
                     string eventName = GetEventNameFromGameEvent(listener.GameEvent);
+                    Debug.Log($"Checking listener for event '{eventName}' against required events: [{string.Join(", ", responseConfig.listenToEvents)}]");
+                    
                     if (responseConfig.listenToEvents.Contains(eventName))
                     {
-                        // Connect the action to this listener's UnityEvent
+                        // Get and validate the OnEventRaised UnityEvent
                         var onEventRaised = listener.OnEventRaised;
+                        if (onEventRaised == null)
+                        {
+                            Debug.LogError($"OnEventRaised UnityEvent is null on GameEventListener for {eventName}");
+                            continue;
+                        }
                         
                         // Add a persistent call to the action's Execute method
                         UnityEditor.Events.UnityEventTools.AddPersistentListener(onEventRaised, action.Execute);
-                        Debug.Log($"Connected {action.GetType().Name} to GameEventListener for event: {eventName}");
+                        connectionsCount++;
+                        
+                        Debug.Log($"✅ Connected {action.GetType().Name}.Execute() to GameEventListener.OnEventRaised for event: {eventName}");
+                        
+                        // Mark listener as dirty for undo/redo
+                        UnityEditor.EditorUtility.SetDirty(listener);
                     }
+                    else
+                    {
+                        Debug.Log($"Skipping listener for event '{eventName}' - not in required events list");
+                    }
+                }
+                
+                if (connectionsCount == 0)
+                {
+                    Debug.LogWarning($"No connections made for {action.GetType().Name} on {responseObject.name} - check event name matching");
+                }
+                else
+                {
+                    Debug.Log($"Made {connectionsCount} connection(s) for {action.GetType().Name} on {responseObject.name}");
                 }
             }
             catch (System.Exception e)
             {
                 Debug.LogError($"Exception connecting action to event listeners: {e.Message}");
+                Debug.LogException(e);
             }
         }
         
