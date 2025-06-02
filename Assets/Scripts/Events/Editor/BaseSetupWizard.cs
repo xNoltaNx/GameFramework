@@ -387,6 +387,271 @@ namespace GameFramework.Events.Editor
             return texture;
         }
         
+        /// <summary>
+        /// Gets ultra-vibrant step colors with hover states and completion status.
+        /// </summary>
+        protected Color GetUltraVibrantStepColor(WizardStepInfo step, bool isActive, bool isCompleted, bool canNavigateTo, bool isHovering = false)
+        {
+            // Get the exact CLGF theme color for this step
+            var theme = GetStepTheme(step);
+            var themeColors = GetCLGFThemeColors(theme);
+            
+            // Use the exact border color from CLGF theme but force full alpha for maximum vibrancy
+            Color baseColor = new Color(
+                themeColors.border.r,
+                themeColors.border.g, 
+                themeColors.border.b,
+                1.0f); // Force full alpha for vibrancy
+            
+            Color finalColor;
+            
+            if (isActive)
+            {
+                // Active button: Use exact CLGF border color with full alpha
+                finalColor = baseColor;
+            }
+            else if (isCompleted)
+            {
+                // Completed: Darker but still recognizable as the theme color
+                finalColor = Color.Lerp(baseColor, Color.black, 0.3f);
+            }
+            else if (canNavigateTo)
+            {
+                // Available: Much darker version of the theme color
+                finalColor = Color.Lerp(baseColor, Color.black, 0.5f);
+            }
+            else
+            {
+                // Disabled: Gray
+                finalColor = new Color(0.1f, 0.1f, 0.1f, 1.0f);
+            }
+            
+            // Apply hover effect: make any button darker when hovered
+            if (isHovering && canNavigateTo)
+            {
+                finalColor = Color.Lerp(finalColor, Color.black, 0.2f);
+            }
+            
+            return finalColor;
+        }
+        
+        /// <summary>
+        /// Draws a themed section with colored background and border.
+        /// </summary>
+        protected void DrawThemedSection(string title, CLGFBaseEditor.CLGFTheme theme, System.Action drawContent, string icon = "📋")
+        {
+            var (background, border, label) = GetCLGFThemeColors(theme);
+            
+            // Draw section header
+            Rect headerRect = GUILayoutUtility.GetRect(0, 25);
+            headerRect.x += 5;
+            headerRect.width -= 10;
+            
+            EditorGUI.DrawRect(headerRect, border);
+            
+            GUIStyle headerStyle = new GUIStyle(EditorStyles.boldLabel)
+            {
+                fontSize = 14,
+                normal = { textColor = Color.white },
+                alignment = TextAnchor.MiddleCenter
+            };
+            
+            GUI.Label(headerRect, $"{icon} {title}", headerStyle);
+            
+            // Draw content area with themed background
+            EditorGUILayout.BeginVertical();
+            EditorGUILayout.Space(5);
+            
+            var contentRect = EditorGUILayout.BeginVertical();
+            EditorGUILayout.Space(8);
+            
+            // Draw content
+            drawContent?.Invoke();
+            
+            EditorGUILayout.Space(8);
+            EditorGUILayout.EndVertical();
+            EditorGUILayout.EndVertical();
+            
+            // Draw background after content to get correct dimensions
+            if (Event.current.type == EventType.Repaint)
+            {
+                Rect backgroundRect = new Rect(
+                    headerRect.x,
+                    headerRect.y + headerRect.height,
+                    headerRect.width,
+                    contentRect.height + 10
+                );
+                
+                EditorGUI.DrawRect(backgroundRect, background);
+                
+                // Draw border
+                float borderWidth = 1f;
+                EditorGUI.DrawRect(new Rect(backgroundRect.x, backgroundRect.y, backgroundRect.width, borderWidth), border);
+                EditorGUI.DrawRect(new Rect(backgroundRect.x, backgroundRect.y + backgroundRect.height - borderWidth, backgroundRect.width, borderWidth), border);
+                EditorGUI.DrawRect(new Rect(backgroundRect.x, backgroundRect.y, borderWidth, backgroundRect.height), border);
+                EditorGUI.DrawRect(new Rect(backgroundRect.x + backgroundRect.width - borderWidth, backgroundRect.y, borderWidth, backgroundRect.height), border);
+            }
+        }
+        
+        #region Flow Diagram System
+        
+        /// <summary>
+        /// Data structure for flow diagram steps.
+        /// </summary>
+        public class FlowStep
+        {
+            public int StepNumber { get; set; }
+            public string Icon { get; set; }
+            public string Description { get; set; }
+            public CLGFBaseEditor.CLGFTheme Theme { get; set; }
+            public string[] Details { get; set; }
+            public bool IsIndented { get; set; }
+            
+            public FlowStep(int stepNumber, string icon, string description, CLGFBaseEditor.CLGFTheme theme, string[] details = null, bool isIndented = false)
+            {
+                StepNumber = stepNumber;
+                Icon = icon;
+                Description = description;
+                Theme = theme;
+                Details = details ?? new string[0];
+                IsIndented = isIndented;
+            }
+        }
+        
+        /// <summary>
+        /// Draws a flashy flow diagram showing the process steps.
+        /// </summary>
+        protected void DrawFlowDiagram(List<FlowStep> steps)
+        {
+            if (steps == null || steps.Count == 0) return;
+            
+            EditorGUILayout.Space(10);
+            
+            for (int i = 0; i < steps.Count; i++)
+            {
+                var step = steps[i];
+                
+                DrawFlowStep(step);
+                
+                // Draw arrow to next step (except for last step)
+                if (i < steps.Count - 1)
+                {
+                    var nextStep = steps[i + 1];
+                    DrawFlowArrow(step.IsIndented, nextStep.IsIndented);
+                }
+                
+                EditorGUILayout.Space(5);
+            }
+        }
+        
+        private void DrawFlowStep(FlowStep step)
+        {
+            EditorGUILayout.BeginHorizontal();
+            
+            // Base indentation
+            float baseIndent = 16f;
+            float additionalIndent = step.IsIndented ? 60f : 0f; // Extra indent for nested steps
+            GUILayout.Space(baseIndent + additionalIndent);
+            
+            // Step number in a colored circle
+            var (stepBg, stepBorder, _) = GetCLGFThemeColors(step.Theme);
+            stepBg.a = 0.3f;
+            stepBorder.a = 1f;
+            
+            GUIStyle stepNumberStyle = new GUIStyle(EditorStyles.boldLabel)
+            {
+                fontSize = 14,
+                fontStyle = FontStyle.Bold,
+                alignment = TextAnchor.MiddleCenter,
+                normal = { textColor = Color.white }
+            };
+            
+            // Draw step number circle
+            Rect numberRect = GUILayoutUtility.GetRect(30, 30);
+            if (Event.current.type == EventType.Repaint)
+            {
+                EditorGUI.DrawRect(numberRect, stepBorder);
+                EditorGUI.DrawRect(new Rect(numberRect.x + 1, numberRect.y + 1, numberRect.width - 2, numberRect.height - 2), stepBg);
+            }
+            EditorGUI.LabelField(numberRect, step.StepNumber.ToString(), stepNumberStyle);
+            
+            GUILayout.Space(12);
+            
+            // Icon and description with big icons
+            GUIStyle iconStyle = new GUIStyle(EditorStyles.boldLabel)
+            {
+                fontSize = 40, // Large icons for visual impact
+                alignment = TextAnchor.UpperLeft
+            };
+            
+            GUIStyle descStyle = new GUIStyle(EditorStyles.boldLabel)
+            {
+                fontSize = 13,
+                fontStyle = FontStyle.Bold,
+                alignment = TextAnchor.LowerLeft
+            };
+            
+            EditorGUILayout.BeginVertical();
+            
+            EditorGUILayout.BeginHorizontal();
+            EditorGUILayout.LabelField(step.Icon, iconStyle, GUILayout.Width(60), GUILayout.Height(50));
+            EditorGUILayout.LabelField(step.Description, descStyle, GUILayout.Height(50));
+            EditorGUILayout.EndHorizontal();
+            
+            // Show details if any
+            if (step.Details != null && step.Details.Length > 0)
+            {
+                foreach (var detail in step.Details)
+                {
+                    GUIStyle detailStyle = new GUIStyle(EditorStyles.label)
+                    {
+                        fontSize = 11,
+                        fontStyle = FontStyle.Normal,
+                        normal = { textColor = Color.gray }
+                    };
+                    EditorGUILayout.LabelField($"  {detail}", detailStyle);
+                }
+            }
+            
+            EditorGUILayout.EndVertical();
+            
+            GUILayout.FlexibleSpace();
+            EditorGUILayout.EndHorizontal();
+        }
+        
+        private void DrawFlowArrow(bool fromIndented, bool toIndented)
+        {
+            EditorGUILayout.Space(5);
+            
+            EditorGUILayout.BeginHorizontal();
+            
+            // Calculate arrow position based on indentation
+            float baseIndent = 16f;
+            float fromIndent = fromIndented ? 60f : 0f;
+            float toIndent = toIndented ? 60f : 0f;
+            
+            // Position arrow between the two step positions
+            float arrowIndent = baseIndent + (fromIndent + toIndent) / 2f;
+            GUILayout.Space(arrowIndent + 15); // Center on step circles
+            
+            // Arrow style
+            GUIStyle arrowStyle = new GUIStyle(EditorStyles.boldLabel)
+            {
+                fontSize = 20,
+                normal = { textColor = Color.gray },
+                alignment = TextAnchor.MiddleCenter
+            };
+            
+            EditorGUILayout.LabelField("↓", arrowStyle, GUILayout.Width(30), GUILayout.Height(20));
+            
+            GUILayout.FlexibleSpace();
+            EditorGUILayout.EndHorizontal();
+            
+            EditorGUILayout.Space(5);
+        }
+        
+        #endregion
+        
         #endregion
     }
     

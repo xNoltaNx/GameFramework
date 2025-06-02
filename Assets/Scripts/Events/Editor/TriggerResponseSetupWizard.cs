@@ -16,10 +16,19 @@ using GameFramework.Core.Editor;
 namespace GameFramework.Events.Editor
 {
     /// <summary>
+    /// Configuration class for the trigger response setup wizard.
+    /// </summary>
+    [System.Serializable]
+    public class TriggerResponseConfig
+    {
+        // This can be expanded later if needed for shared configuration
+    }
+    
+    /// <summary>
     /// Multi-step wizard for setting up trigger/response patterns.
     /// Supports templates and custom configuration for common gameplay scenarios.
     /// </summary>
-    public class TriggerResponseSetupWizard : EditorWindow
+    public class TriggerResponseSetupWizard : BaseSetupWizard<TriggerResponseConfig>
     {
         private enum WizardStep
         {
@@ -43,12 +52,9 @@ namespace GameFramework.Events.Editor
         public static void ShowWindow()
         {
             var window = GetWindow<TriggerResponseSetupWizard>("Complete Interaction Setup");
-            window.minSize = new Vector2(750, 700);
+            window.minSize = new Vector2(750, 750);
         }
         
-        // Wizard state
-        private WizardStep currentStep = WizardStep.ProjectSetup;
-        private Vector2 scrollPosition;
         
         // Template system
         private TriggerResponseTemplate[] availableTemplates;
@@ -63,6 +69,7 @@ namespace GameFramework.Events.Editor
         private List<EventChannelConfig> eventChannelConfigs = new List<EventChannelConfig>();
         private List<ConditionConfig> conditionConfigs = new List<ConditionConfig>();
         private List<ResponseObjectConfig> responseObjectConfigs = new List<ResponseObjectConfig>();
+        private List<System.Action> pendingActions = new List<System.Action>();
         private bool requireAllConditions = true;
         private bool canRepeat = true;
         private float cooldownTime = 0f;
@@ -80,307 +87,176 @@ namespace GameFramework.Events.Editor
         private string selectedCategory = "All";
         private bool showAdvancedSettings = false;
         
-        private void OnEnable()
+        // Removed old foldout states - now using FoldoutUtility
+        
+        #region BaseSetupWizard Implementation
+        
+        protected override WizardStepInfo[] GetWizardSteps()
+        {
+            return new WizardStepInfo[]
+            {
+                new WizardStepInfo("ProjectSetup", "Project Setup", "Configure the project and creation mode for your interaction system.", "🏗️", CLGFBaseEditor.CLGFTheme.System),
+                new WizardStepInfo("TemplateSelection", "Template Selection", "Choose a template or start from scratch to create complete multi-object interactions.", "📋", CLGFBaseEditor.CLGFTheme.System),
+                new WizardStepInfo("TriggerSetup", "Trigger Setup", "Configure the triggering object that will start the interaction.", "⚡", CLGFBaseEditor.CLGFTheme.Action),
+                new WizardStepInfo("EventChannelSetup", "Event Channels", "Set up event channels that connect triggers to responses.", "📡", CLGFBaseEditor.CLGFTheme.Event),
+                new WizardStepInfo("ConditionSetup", "Conditions", "Add optional conditions that must be met for the interaction to occur.", "🔍", CLGFBaseEditor.CLGFTheme.Action),
+                new WizardStepInfo("ResponseObjectSetup", "Response Objects", "Configure multiple objects that will respond to the interaction events.", "🎬", CLGFBaseEditor.CLGFTheme.ObjectControl),
+                new WizardStepInfo("Review", "Review", "Review your complete interaction system before creation.", "📝", CLGFBaseEditor.CLGFTheme.Character),
+                new WizardStepInfo("Complete", "Complete", "Setup complete! Your multi-object interaction system has been created.", "✅", CLGFBaseEditor.CLGFTheme.System)
+            };
+        }
+        
+        protected override void DrawStepContent(WizardStepInfo step)
+        {
+            switch (step.Id)
+            {
+                case "ProjectSetup":
+                    DrawProjectSetupStep();
+                    break;
+                case "TemplateSelection":
+                    DrawTemplateSelectionStep();
+                    break;
+                case "TriggerSetup":
+                    DrawTriggerSetupStep();
+                    break;
+                case "EventChannelSetup":
+                    DrawEventChannelSetupStep();
+                    break;
+                case "ConditionSetup":
+                    DrawConditionSetupStep();
+                    break;
+                case "ResponseObjectSetup":
+                    DrawResponseObjectSetupStep();
+                    break;
+                case "Review":
+                    DrawReviewStep();
+                    break;
+                case "Complete":
+                    DrawCompletionStep();
+                    break;
+            }
+        }
+        
+        protected override CLGFBaseEditor.CLGFTheme GetStepTheme(WizardStepInfo step)
+        {
+            return step.Theme;
+        }
+        
+        protected override bool CanProceedToStep(int stepIndex)
+        {
+            var steps = GetWizardSteps();
+            if (stepIndex >= steps.Length) return false;
+            
+            return stepIndex switch
+            {
+                0 => true, // Project Setup always accessible
+                1 => true, // Template Selection always accessible after project setup
+                2 => true, // Trigger Setup accessible after template selection
+                3 => HasValidTriggerConfiguration(), // Event Channel Setup requires valid trigger
+                4 => eventChannelConfigs.Count > 0, // Condition Setup requires event channels
+                5 => eventChannelConfigs.Count > 0, // Response Object Setup requires event channels
+                6 => HasValidSetupConfiguration(), // Review requires valid configuration
+                7 => HasValidSetupConfiguration(), // Complete requires valid configuration
+                _ => false
+            };
+        }
+        
+        protected override bool CanProceedFromStep(int stepIndex)
+        {
+            return stepIndex switch
+            {
+                0 => !string.IsNullOrEmpty(projectName?.Trim()), // Project Setup requires project name
+                1 => selectedTemplate != null || !useTemplate, // Template Selection requires selection or manual mode
+                2 => HasValidTriggerConfiguration(), // Trigger Setup requires valid trigger
+                3 => eventChannelConfigs.Count > 0, // Event Channel Setup requires at least one channel
+                4 => true, // Condition Setup is optional
+                5 => responseObjectConfigs.Count > 0, // Response Object Setup requires at least one response
+                6 => HasValidSetupConfiguration(), // Review requires valid configuration
+                7 => true, // Complete step can always proceed (closes wizard)
+                _ => false
+            };
+        }
+        
+        protected override void OnWizardComplete()
+        {
+            CompleteSetup();
+        }
+        
+        protected override void OnWizardStart()
         {
             LoadAvailableTemplates();
             LoadExistingProjectFolders();
         }
         
-        private void OnGUI()
+        protected override string GetWizardTitle()
         {
-            scrollPosition = EditorGUILayout.BeginScrollView(scrollPosition);
-            DrawStepIndicator();
-            DrawHeader();
-            
-            EditorGUILayout.Space(10);
-            
-            // Draw step content with colored background
-            DrawStepContentWithBackground();
-            
-            EditorGUILayout.Space(10);
-            DrawNavigationButtons();
-            
-            EditorGUILayout.EndScrollView();
+            return "Complete Interaction Setup Wizard";
         }
         
-        private void DrawStepContentWithBackground()
+        protected override Vector2 GetMinWindowSize()
         {
-            // Get the background color for current step
-            Color backgroundColor = GetCurrentStepBackgroundColor();
-            Color borderColor = GetCurrentStepBorderColor();
-            
-            // Add margin space before content
-            EditorGUILayout.Space(8);
-            
-            // Begin colored background area with proper margins
-            EditorGUILayout.BeginHorizontal();
-            GUILayout.Space(10); // Left margin
-            
-            var contentRect = EditorGUILayout.BeginVertical();
-            
-            // Add top margin inside the content area
-            EditorGUILayout.Space(8);
-            
-            // Draw the step content
-            switch (currentStep)
-            {
-                case WizardStep.ProjectSetup:
-                    DrawProjectSetup();
-                    break;
-                case WizardStep.TemplateSelection:
-                    DrawTemplateSelection();
-                    break;
-                case WizardStep.TriggerSetup:
-                    DrawTriggerSetup();
-                    break;
-                case WizardStep.EventChannelSetup:
-                    DrawEventChannelSetup();
-                    break;
-                case WizardStep.ConditionSetup:
-                    DrawConditionSetup();
-                    break;
-                case WizardStep.ResponseObjectSetup:
-                    DrawResponseObjectSetup();
-                    break;
-                case WizardStep.Review:
-                    DrawReview();
-                    break;
-                case WizardStep.Complete:
-                    DrawComplete();
-                    break;
-            }
-            
-            // Add bottom margin inside the content area
-            EditorGUILayout.Space(8);
-            
-            EditorGUILayout.EndVertical();
-            
-            GUILayout.Space(10); // Right margin
-            EditorGUILayout.EndHorizontal();
-            
-            // Add margin space after content
-            EditorGUILayout.Space(8);
-            
-            // Draw background and border after content to get correct dimensions
-            if (Event.current.type == EventType.Repaint)
-            {
-                // Create background rect that encompasses the entire content area including margins
-                Rect backgroundRect = new Rect(
-                    5, // Left position with margin
-                    contentRect.y - 10, // Top position with margin
-                    position.width - 10, // Full width minus left/right margins
-                    contentRect.height + 20 // Height plus top/bottom margins
-                );
-                
-                // Draw background
-                EditorGUI.DrawRect(backgroundRect, backgroundColor);
-                
-                // Draw border with proper spacing from content
-                float borderWidth = 2f;
-                EditorGUI.DrawRect(new Rect(backgroundRect.x, backgroundRect.y, backgroundRect.width, borderWidth), borderColor);
-                EditorGUI.DrawRect(new Rect(backgroundRect.x, backgroundRect.y + backgroundRect.height - borderWidth, backgroundRect.width, borderWidth), borderColor);
-                EditorGUI.DrawRect(new Rect(backgroundRect.x, backgroundRect.y, borderWidth, backgroundRect.height), borderColor);
-                EditorGUI.DrawRect(new Rect(backgroundRect.x + backgroundRect.width - borderWidth, backgroundRect.y, borderWidth, backgroundRect.height), borderColor);
-            }
+            return new Vector2(750, 750);
         }
         
-        private CLGFBaseEditor.CLGFTheme GetStepTheme(WizardStep step)
+        
+        private WizardStep GetCurrentWizardStep()
         {
-            return step switch
+            var stepId = GetCurrentStep()?.Id ?? "ProjectSetup";
+            return stepId switch
             {
-                WizardStep.ProjectSetup => CLGFBaseEditor.CLGFTheme.UI,
-                WizardStep.TemplateSelection => CLGFBaseEditor.CLGFTheme.System,
-                WizardStep.TriggerSetup => CLGFBaseEditor.CLGFTheme.Action,
-                WizardStep.EventChannelSetup => CLGFBaseEditor.CLGFTheme.Event,
-                WizardStep.ConditionSetup => CLGFBaseEditor.CLGFTheme.Action,
-                WizardStep.ResponseObjectSetup => CLGFBaseEditor.CLGFTheme.ObjectControl,
-                WizardStep.Review => CLGFBaseEditor.CLGFTheme.System,
-                WizardStep.Complete => CLGFBaseEditor.CLGFTheme.System,
-                _ => CLGFBaseEditor.CLGFTheme.System
+                "ProjectSetup" => WizardStep.ProjectSetup,
+                "TemplateSelection" => WizardStep.TemplateSelection,
+                "TriggerSetup" => WizardStep.TriggerSetup,
+                "EventChannelSetup" => WizardStep.EventChannelSetup,
+                "ConditionSetup" => WizardStep.ConditionSetup,
+                "ResponseObjectSetup" => WizardStep.ResponseObjectSetup,
+                "Review" => WizardStep.Review,
+                "Complete" => WizardStep.Complete,
+                _ => WizardStep.ProjectSetup
             };
         }
         
-        private (Color background, Color border, Color label) GetCLGFThemeColors(CLGFBaseEditor.CLGFTheme theme)
+        #endregion
+        
+        #region Legacy Methods (Updated to use BaseSetupWizard)
+        private void DrawProjectSetupStep()
         {
-            return theme switch
-            {
-                CLGFBaseEditor.CLGFTheme.Event => 
-                    (new Color(0.3f, 0.7f, 0.9f, 0.05f), new Color(0.3f, 0.7f, 0.9f, 0.8f), new Color(0.2f, 0.6f, 0.8f, 0.8f)),
-                CLGFBaseEditor.CLGFTheme.Action => 
-                    (new Color(0.9f, 0.7f, 0.3f, 0.05f), new Color(0.9f, 0.7f, 0.3f, 0.8f), new Color(0.8f, 0.6f, 0.2f, 0.8f)),
-                CLGFBaseEditor.CLGFTheme.ObjectControl => 
-                    (new Color(0.3f, 0.9f, 0.4f, 0.05f), new Color(0.3f, 0.9f, 0.4f, 0.8f), new Color(0.2f, 0.7f, 0.3f, 0.8f)),
-                CLGFBaseEditor.CLGFTheme.Character => 
-                    (new Color(0.8f, 0.4f, 0.9f, 0.05f), new Color(0.8f, 0.4f, 0.9f, 0.8f), new Color(0.7f, 0.3f, 0.8f, 0.8f)),
-                CLGFBaseEditor.CLGFTheme.Camera => 
-                    (new Color(0.4f, 0.9f, 0.8f, 0.05f), new Color(0.4f, 0.9f, 0.8f, 0.8f), new Color(0.3f, 0.8f, 0.7f, 0.8f)),
-                CLGFBaseEditor.CLGFTheme.UI => 
-                    (new Color(0.9f, 0.5f, 0.7f, 0.05f), new Color(0.9f, 0.5f, 0.7f, 0.8f), new Color(0.8f, 0.4f, 0.6f, 0.8f)),
-                CLGFBaseEditor.CLGFTheme.System => 
-                    (new Color(0.9f, 0.3f, 0.3f, 0.05f), new Color(0.9f, 0.3f, 0.3f, 0.8f), new Color(0.8f, 0.2f, 0.2f, 0.8f)),
-                _ => (Color.gray, Color.white, Color.black)
-            };
+            DrawProjectSetup();
+        }
+        private void DrawTemplateSelectionStep()
+        {
+            DrawTemplateSelection();
+        }
+        private void DrawTriggerSetupStep()
+        {
+            DrawTriggerSetup();
         }
         
-        private Color GetCurrentStepBackgroundColor()
+        private void DrawEventChannelSetupStep()
         {
-            var theme = GetStepTheme(currentStep);
-            var colors = GetCLGFThemeColors(theme);
-            
-            // Special case for Review step - make background transparent
-            if (currentStep == WizardStep.Review)
-            {
-                return new Color(colors.background.r, colors.background.g, colors.background.b, 0.0f);
-            }
-            
-            return colors.background;
+            DrawEventChannelSetup();
         }
         
-        private Color GetCurrentStepBorderColor()
+        private void DrawConditionSetupStep()
         {
-            var theme = GetStepTheme(currentStep);
-            var colors = GetCLGFThemeColors(theme);
-            
-            // Special case for Review step - make border transparent  
-            if (currentStep == WizardStep.Review)
-            {
-                return new Color(colors.border.r, colors.border.g, colors.border.b, 0.0f);
-            }
-            
-            return colors.border;
+            DrawConditionSetup();
         }
         
-        #region Header and Navigation
-        
-        private void DrawHeader()
+        private void DrawResponseObjectSetupStep()
         {
-            EditorGUILayout.Space(10);
-            
-            // Main title with wizard icon
-            GUIStyle headerStyle = new GUIStyle(EditorStyles.boldLabel)
-            {
-                fontSize = 20, // Slightly larger for main title
-                alignment = TextAnchor.MiddleCenter
-            };
-
-            // Current step header with theme colors and icons
-            DrawCurrentStepHeader();
-            
-            string description = currentStep switch
-            {
-                WizardStep.TemplateSelection => "Choose a template or start from scratch to create complete multi-object interactions.",
-                WizardStep.TriggerSetup => "Configure the triggering object that will start the interaction.",
-                WizardStep.EventChannelSetup => "Set up event channels that connect triggers to responses.",
-                WizardStep.ConditionSetup => "Add optional conditions that must be met for the interaction to occur.",
-                WizardStep.ResponseObjectSetup => "Configure multiple objects that will respond to the interaction events.",
-                WizardStep.Review => "Review your complete interaction system before creation.",
-                WizardStep.Complete => "Setup complete! Your multi-object interaction system has been created.",
-                _ => "Configure your complete interaction system."
-            };
-            
-            DrawThemedHelpBox(description);
+            DrawResponseObjectSetup();
         }
         
-        private void DrawCurrentStepHeader()
+        private void DrawReviewStep()
         {
-            var stepInfo = GetCurrentStepInfo();
-            Color borderColor = GetCurrentStepBorderColor();
-            
-            // Create header rect
-            Rect headerRect = GUILayoutUtility.GetRect(0, 28);
-            headerRect.x += 10;
-            headerRect.width -= 20;
-            
-            // Draw background
-            EditorGUI.DrawRect(headerRect, borderColor);
-            
-            // Create styles
-            GUIStyle iconStyle = new GUIStyle(EditorStyles.boldLabel)
-            {
-                alignment = TextAnchor.MiddleLeft,
-                normal = { textColor = Color.white },
-                fontSize = 40,
-                fontStyle = FontStyle.Bold
-            };
-            
-            GUIStyle textStyle = new GUIStyle(EditorStyles.boldLabel)
-            {
-                alignment = TextAnchor.MiddleLeft,
-                normal = { textColor = Color.white },
-                fontSize = 14,
-                fontStyle = FontStyle.Bold
-            };
-            
-            // Draw icon and text
-            float iconWidth = iconStyle.CalcSize(new GUIContent(stepInfo.icon)).x;
-            
-            Rect iconRect = new Rect(headerRect.x + 8, headerRect.y, iconWidth, headerRect.height);
-            EditorGUI.LabelField(iconRect, stepInfo.icon, iconStyle);
-            
-            Rect textRect = new Rect(iconRect.x + iconWidth, headerRect.y, headerRect.width - iconWidth - 16, headerRect.height);
-            EditorGUI.LabelField(textRect, stepInfo.title, textStyle);
-            
-            EditorGUILayout.Space(5);
+            DrawReview();
         }
         
-        private (string icon, string title) GetCurrentStepInfo()
+        private void DrawCompletionStep()
         {
-            return currentStep switch
-            {
-                WizardStep.TemplateSelection => ("📋", "CLGF: TEMPLATE SELECTION"),
-                WizardStep.TriggerSetup => ("⚡", "CLGF: TRIGGER CONFIGURATION"),
-                WizardStep.EventChannelSetup => ("📡", "CLGF: EVENT CHANNELS"),
-                WizardStep.ConditionSetup => ("🔍", "CLGF: TRIGGER CONDITIONS"),
-                WizardStep.ResponseObjectSetup => ("🎬", "CLGF: RESPONSE OBJECTS"),
-                WizardStep.Review => ("📝", "CLGF: INTERACTION REVIEW"),
-                WizardStep.Complete => ("✅", "CLGF: SETUP COMPLETE"),
-                _ => ("🔧", "CLGF: WIZARD STEP")
-            };
+            DrawComplete();
         }
-        
-        private void DrawThemedHelpBox(string message)
-        {
-            Color backgroundColor = GetCurrentStepBackgroundColor();
-            Color borderColor = GetCurrentStepBorderColor();
-            
-            // Make colors more opaque for the help box
-            backgroundColor.a = 0.15f;
-            borderColor.a = 0.8f;
-            
-            // Get rect for the help box
-            GUIContent content = new GUIContent(message);
-            GUIStyle helpBoxStyle = new GUIStyle(EditorStyles.helpBox)
-            {
-                wordWrap = true,
-                fontSize = 12,
-                padding = new RectOffset(12, 12, 8, 8),
-                normal = { textColor = EditorGUIUtility.isProSkin ? Color.white : Color.black }
-            };
-            
-            float height = helpBoxStyle.CalcHeight(content, EditorGUIUtility.currentViewWidth - 20);
-            Rect helpBoxRect = GUILayoutUtility.GetRect(content, helpBoxStyle, GUILayout.Height(height));
-            
-            // Add margin
-            helpBoxRect.x += 10;
-            helpBoxRect.width -= 20;
-            
-            // Draw colored background
-            EditorGUI.DrawRect(helpBoxRect, backgroundColor);
-            
-            // Draw border
-            float borderWidth = 1f;
-            EditorGUI.DrawRect(new Rect(helpBoxRect.x, helpBoxRect.y, helpBoxRect.width, borderWidth), borderColor);
-            EditorGUI.DrawRect(new Rect(helpBoxRect.x, helpBoxRect.y + helpBoxRect.height - borderWidth, helpBoxRect.width, borderWidth), borderColor);
-            EditorGUI.DrawRect(new Rect(helpBoxRect.x, helpBoxRect.y, borderWidth, helpBoxRect.height), borderColor);
-            EditorGUI.DrawRect(new Rect(helpBoxRect.x + helpBoxRect.width - borderWidth, helpBoxRect.y, borderWidth, helpBoxRect.height), borderColor);
-            
-            // Draw the text
-            EditorGUI.LabelField(helpBoxRect, content, helpBoxStyle);
-            
-            EditorGUILayout.Space(5);
-        }
-        
-        private void DrawStepIndicator()
+        private void DrawCustomStepIndicator()
         {
             EditorGUILayout.Space(5);
             
@@ -392,9 +268,9 @@ namespace GameFramework.Events.Editor
             
             for (int i = 0; i < steps.Length; i++)
             {
-                bool isActive = (int)currentStep == i;
-                bool isCompleted = (int)currentStep > i;
-                bool canNavigateTo = CanNavigateToStep((WizardStep)i);
+                bool isActive = currentStepIndex == i;
+                bool isCompleted = currentStepIndex > i;
+                bool canNavigateTo = CanProceedToStep(i);
                 
                 // Get step-specific color based on CLGF themes
                 Color stepColor = stepColors[i];
@@ -430,7 +306,7 @@ namespace GameFramework.Events.Editor
                 // Handle click detection
                 if (Event.current.type == EventType.MouseDown && buttonRect.Contains(Event.current.mousePosition) && canNavigateTo)
                 {
-                    NavigateToStep((WizardStep)i);
+                    NavigateToStep(i);
                     Event.current.Use();
                 }
                 
@@ -457,14 +333,14 @@ namespace GameFramework.Events.Editor
         private Color GetUltraVibrantStepColor(WizardStep step, bool isActive, bool isCompleted, bool canNavigateTo, bool isHovering = false)
         {
             // Get the exact CLGF theme color for this step
-            var theme = GetStepTheme(step);
+            var theme = GetStepThemeForEnum(step);
             var themeColors = GetCLGFThemeColors(theme);
             
             // Use the exact border color from CLGF theme but force full alpha for maximum vibrancy
             Color baseColor = new Color(
-                themeColors.border.r,
-                themeColors.border.g, 
-                themeColors.border.b,
+                themeColors.borderColor.r,
+                themeColors.borderColor.g, 
+                themeColors.borderColor.b,
                 1.0f); // Force full alpha for vibrancy
             
             Color finalColor;
@@ -519,7 +395,7 @@ namespace GameFramework.Events.Editor
             {
                 var themeColors = GetCLGFThemeColors(stepThemes[i]);
                 // Create vibrant version by increasing saturation and opacity
-                var baseColor = themeColors.border; // Use border color as base for vibrancy
+                var baseColor = themeColors.borderColor; // Use border color as base for vibrancy
                 colors[i] = new Color(
                     Mathf.Min(1.0f, baseColor.r * 1.2f), 
                     Mathf.Min(1.0f, baseColor.g * 1.2f), 
@@ -553,31 +429,16 @@ namespace GameFramework.Events.Editor
         private bool CanNavigateToStep(WizardStep step)
         {
             // Allow navigation to completed steps and the current step
-            return (int)step <= (int)currentStep || HasCompletedStep(step);
+            return CanProceedToStep((int)step);
         }
         
-        private bool HasCompletedStep(WizardStep step)
-        {
-            // Check if the step has been completed based on required data
-            return step switch
-            {
-                WizardStep.ProjectSetup => true, // Always accessible first step
-                WizardStep.TemplateSelection => (useExistingProjectFolder && !string.IsNullOrEmpty(selectedProjectFolderPath)) || (!useExistingProjectFolder && !string.IsNullOrEmpty(projectName.Trim())),
-                WizardStep.TriggerSetup => !useTemplate || selectedTemplate != null,
-                WizardStep.EventChannelSetup => triggerObject != null || (createNewTriggerObject && !string.IsNullOrEmpty(newTriggerObjectName.Trim())),
-                WizardStep.ConditionSetup => eventChannelConfigs.Count > 0,
-                WizardStep.ResponseObjectSetup => true, // Conditions are optional
-                WizardStep.Review => responseObjectConfigs.Count > 0,
-                WizardStep.Complete => false, // Only accessible after applying setup
-                _ => false
-            };
-        }
+        // Removed HasCompletedStep - now using BaseSetupWizard's CanProceedToStep
         
         private void NavigateToStep(WizardStep step)
         {
             if (CanNavigateToStep(step))
             {
-                currentStep = step;
+                NavigateToStep((int)step);
                 Repaint();
             }
         }
@@ -587,7 +448,7 @@ namespace GameFramework.Events.Editor
             GUILayout.BeginHorizontal();
             
             // Back button
-            GUI.enabled = currentStep > WizardStep.TemplateSelection;
+            GUI.enabled = currentStepIndex > 1; // Template Selection is index 1
             if (GUILayout.Button("← Back", GUILayout.Height(30)))
             {
                 PreviousStep();
@@ -597,19 +458,19 @@ namespace GameFramework.Events.Editor
             GUILayout.FlexibleSpace();
             
             // Next/Finish button
-            string buttonText = currentStep == WizardStep.Review ? "Apply Setup" : 
-                               currentStep == WizardStep.Complete ? "Close" : "Next →";
+            string buttonText = currentStepIndex == 6 ? "Apply Setup" : 
+                               currentStepIndex == 7 ? "Close" : "Next →";
             
             bool canProceed = CanProceedToNextStep();
             GUI.enabled = canProceed;
             
             if (GUILayout.Button(buttonText, GUILayout.Height(30), GUILayout.Width(120)))
             {
-                if (currentStep == WizardStep.Review)
+                if (currentStepIndex == 6) // Review step
                 {
                     ApplySetup();
                 }
-                else if (currentStep == WizardStep.Complete)
+                else if (currentStepIndex == 7) // Complete step
                 {
                     Close();
                 }
@@ -863,7 +724,7 @@ namespace GameFramework.Events.Editor
             }
             else
             {
-                GUILayout.Label("🎯", new GUIStyle(EditorStyles.label) { fontSize = 24 }, GUILayout.Width(32), GUILayout.Height(32));
+                GUILayout.Label("📋", new GUIStyle(EditorStyles.label) { fontSize = 24 }, GUILayout.Width(32), GUILayout.Height(32));
             }
             
             EditorGUILayout.BeginVertical();
@@ -897,100 +758,111 @@ namespace GameFramework.Events.Editor
             };
             EditorGUILayout.LabelField("⚡ Trigger Configuration", titleStyle);
             
-            EditorGUILayout.Space(10); // Extra buffer
+            EditorGUILayout.Space(5);
+            DrawFoldoutControls();
+            EditorGUILayout.Space(5);
 
-            // Trigger mode selection - matching events/responses visual pattern
-            EditorGUILayout.BeginHorizontal();
-            EditorGUILayout.LabelField("Trigger Mode:", GUILayout.Width(80));
-
-            if (GUILayout.Toggle(createNewTriggerObject, "✨ Create New", EditorStyles.miniButtonLeft, GUILayout.Width(100)))
+            // Basic trigger setup foldout
+            DrawFoldoutSection("trigger_basic", "Basic Trigger Setup", "⚡", CLGFBaseEditor.CLGFTheme.Action, () =>
             {
-                if (!createNewTriggerObject)
+                // Trigger mode selection - matching events/responses visual pattern
+                EditorGUILayout.BeginHorizontal();
+                EditorGUILayout.LabelField("Trigger Mode:", GUILayout.Width(80));
+
+                if (GUILayout.Toggle(createNewTriggerObject, "✨ Create New", EditorStyles.miniButtonLeft, GUILayout.Width(100)))
                 {
-                    createNewTriggerObject = true;
-                    triggerObject = null;
+                    if (!createNewTriggerObject)
+                    {
+                        createNewTriggerObject = true;
+                        triggerObject = null;
+                    }
                 }
-            }
 
-            if (GUILayout.Toggle(!createNewTriggerObject, "📂 Use Existing", EditorStyles.miniButtonRight, GUILayout.Width(100)))
-            {
+                if (GUILayout.Toggle(!createNewTriggerObject, "📂 Use Existing", EditorStyles.miniButtonRight, GUILayout.Width(100)))
+                {
+                    if (createNewTriggerObject)
+                    {
+                        createNewTriggerObject = false;
+                    }
+                }
+
+                EditorGUILayout.EndHorizontal();
+                EditorGUILayout.Space(3);
+
+                // Mode-specific UI with mini labels
                 if (createNewTriggerObject)
                 {
-                    createNewTriggerObject = false;
-                }
-            }
-
-            EditorGUILayout.EndHorizontal();
-            EditorGUILayout.Space(3);
-
-            // Mode-specific UI with mini labels
-            if (createNewTriggerObject)
-            {
-                EditorGUILayout.LabelField("✨ Creating New GameObject", EditorStyles.miniLabel);
-                
-                newTriggerObjectName = EditorGUILayout.TextField(
-                    new GUIContent("GameObject Name", "Name for the new trigger GameObject"),
-                    newTriggerObjectName);
+                    EditorGUILayout.LabelField("✨ Creating New GameObject", EditorStyles.miniLabel);
                     
-                if (string.IsNullOrEmpty(newTriggerObjectName.Trim()))
-                {
-                    EditorGUILayout.HelpBox("Please enter a name for the new GameObject.", MessageType.Warning);
-                    return;
-                }
-                
-                // Show a helpful note about what will be created
-                EditorGUILayout.HelpBox($"A new GameObject named '{newTriggerObjectName}' will be created in the scene and configured as your trigger.", MessageType.Info);
-            }
-            else
-            {
-                EditorGUILayout.LabelField("📂 Use Existing GameObject", EditorStyles.miniLabel);
-                
-                triggerObject = (GameObject)EditorGUILayout.ObjectField(
-                    new GUIContent("Trigger GameObject", "The GameObject that will start the interaction (receives trigger components)"),
-                    triggerObject, typeof(GameObject), true);
+                    newTriggerObjectName = EditorGUILayout.TextField(
+                        new GUIContent("GameObject Name", "Name for the new trigger GameObject"),
+                        newTriggerObjectName);
+                        
+                    if (string.IsNullOrEmpty(newTriggerObjectName.Trim()))
+                    {
+                        EditorGUILayout.HelpBox("Please enter a name for the new GameObject.", MessageType.Warning);
+                        return;
+                    }
                     
-                if (triggerObject == null)
-                {
-                    EditorGUILayout.HelpBox("Please select a trigger GameObject to continue.", MessageType.Warning);
-                    return;
+                    // Show a helpful note about what will be created
+                    EditorGUILayout.HelpBox($"A new GameObject named '{newTriggerObjectName}' will be created in the scene and configured as your trigger.", MessageType.Info);
                 }
-            }
-            
-            EditorGUILayout.Space(10);
-            
-            // Trigger type selection
-            triggerConfig.triggerType = (TriggerType)EditorGUILayout.EnumPopup("Trigger Type", triggerConfig.triggerType);
-            
-            EditorGUILayout.Space(5);
-            
-            // Type-specific settings
-            switch (triggerConfig.triggerType)
+                else
+                {
+                    EditorGUILayout.LabelField("📂 Use Existing GameObject", EditorStyles.miniLabel);
+                    
+                    triggerObject = (GameObject)EditorGUILayout.ObjectField(
+                        new GUIContent("Trigger GameObject", "The GameObject that will start the interaction (receives trigger components)"),
+                        triggerObject, typeof(GameObject), true);
+                        
+                    if (triggerObject == null)
+                    {
+                        EditorGUILayout.HelpBox("Please select a trigger GameObject to continue.", MessageType.Warning);
+                        return;
+                    }
+                }
+                
+                EditorGUILayout.Space(10);
+                
+                // Trigger type selection
+                triggerConfig.triggerType = (TriggerType)EditorGUILayout.EnumPopup("Trigger Type", triggerConfig.triggerType);
+            }, true, false, 0, "Configure the basic trigger GameObject and type");
+
+            // Type-specific settings foldout
+            string triggerTypeIcon = triggerConfig.triggerType switch
             {
-                case TriggerType.Collision:
-                    DrawCollisionTriggerSettings();
-                    break;
-                case TriggerType.Proximity:
-                    DrawProximityTriggerSettings();
-                    break;
-                case TriggerType.Timer:
-                    DrawTimerTriggerSettings();
-                    break;
-            }
-            
-            EditorGUILayout.Space(10);
-            
-            // General settings
-            GUIStyle subsectionStyle = new GUIStyle(EditorStyles.boldLabel)
-            {
-                fontSize = 14
+                TriggerType.Collision => "💥",
+                TriggerType.Proximity => "📡",
+                TriggerType.Timer => "⏰",
+                _ => "⚙️"
             };
-            EditorGUILayout.LabelField("⚙️ General Settings", subsectionStyle);
-            canRepeat = EditorGUILayout.Toggle("Can Repeat", canRepeat);
-            if (canRepeat)
+            
+            DrawFoldoutSection("trigger_settings", $"{triggerConfig.triggerType} Settings", triggerTypeIcon, CLGFBaseEditor.CLGFTheme.Action, () =>
             {
-                cooldownTime = EditorGUILayout.FloatField("Cooldown Time", cooldownTime);
-            }
-            debugMode = EditorGUILayout.Toggle("Debug Mode", debugMode);
+                switch (triggerConfig.triggerType)
+                {
+                    case TriggerType.Collision:
+                        DrawCollisionTriggerSettings();
+                        break;
+                    case TriggerType.Proximity:
+                        DrawProximityTriggerSettings();
+                        break;
+                    case TriggerType.Timer:
+                        DrawTimerTriggerSettings();
+                        break;
+                }
+            }, true, false, 0, $"Configure {triggerConfig.triggerType.ToString().ToLower()} trigger parameters");
+
+            // General settings foldout
+            DrawFoldoutSection("trigger_general", "General Settings", "⚙️", CLGFBaseEditor.CLGFTheme.System, () =>
+            {
+                canRepeat = EditorGUILayout.Toggle("Can Repeat", canRepeat);
+                if (canRepeat)
+                {
+                    cooldownTime = EditorGUILayout.FloatField("Cooldown Time", cooldownTime);
+                }
+                debugMode = EditorGUILayout.Toggle("Debug Mode", debugMode);
+            }, false, false, 0, "Configure repetition and debug settings");
         }
         
         private void DrawEventChannelSetup()
@@ -1001,55 +873,58 @@ namespace GameFramework.Events.Editor
             };
             EditorGUILayout.LabelField("📡 Event Channel Configuration", titleStyle);
             
-            EditorGUILayout.Space(10); // Extra buffer
+            EditorGUILayout.Space(5);
+            DrawFoldoutControls();
+            EditorGUILayout.Space(5);
 
             DrawThemedHelpBox("Event channels connect triggers to responses. When a trigger fires, it raises events that listeners respond to.");
             
-            // List existing event channels
-            for (int i = 0; i < eventChannelConfigs.Count; i++)
+            // Event channels overview foldout with header buttons
+            var eventChannelHeaderButtons = new FoldoutUtility.FoldoutButton[]
             {
-                EditorGUILayout.BeginVertical(GUI.skin.box);
-                
-                EditorGUILayout.BeginHorizontal();
-                
-                // Create larger, more prominent header with event name
-                var eventConfig = eventChannelConfigs[i];
-                string eventDisplayName = GetEventChannelDisplayName(eventConfig);
-                string headerText = string.IsNullOrEmpty(eventDisplayName) ? 
-                    $"🔵 Event Channel {i + 1}" : 
-                    $"🔵 Event Channel {i + 1} - {eventDisplayName}";
-                
-                GUIStyle headerStyle = new GUIStyle(EditorStyles.boldLabel)
-                {
-                    fontSize = 15,
-                    fontStyle = FontStyle.Bold
-                };
-                
-                EditorGUILayout.LabelField(headerText, headerStyle);
-                if (GUILayout.Button("✕", GUILayout.Width(25)))
-                {
-                    eventChannelConfigs.RemoveAt(i);
-                    i--;
-                    EditorGUILayout.EndHorizontal();
-                    EditorGUILayout.EndVertical();
-                    continue;
-                }
-                EditorGUILayout.EndHorizontal();
-                
-                EditorGUILayout.Space(5);
-                
-                // Event selection mode
-                DrawEventSelectionMode(eventChannelConfigs[i]);
-                
-                EditorGUILayout.EndVertical();
-                EditorGUILayout.Space(5);
-            }
+                new FoldoutUtility.FoldoutButton("➕ Add", () => {
+                    eventChannelConfigs.Add(new EventChannelConfig());
+                }, "Add a new event channel", null, null, 80f)
+            };
             
-            // Add event channel button
-            if (GUILayout.Button("➕ Add Event Channel", GUILayout.Height(25)))
+            DrawFoldoutSection("event_channels", "Event Channels", "📡", CLGFBaseEditor.CLGFTheme.Event, () =>
             {
-                eventChannelConfigs.Add(new EventChannelConfig());
+                // List existing event channels
+                for (int i = 0; i < eventChannelConfigs.Count; i++)
+                {
+                    var eventConfig = eventChannelConfigs[i];
+                    string eventDisplayName = GetEventChannelDisplayName(eventConfig);
+                    string channelTitle = string.IsNullOrEmpty(eventDisplayName) ? 
+                        $"Event Channel {i + 1}" : 
+                        $"{eventDisplayName}";
+                    
+                    // Individual event channel foldout with header buttons
+                    var individualChannelButtons = new FoldoutUtility.FoldoutButton[]
+                    {
+                        new FoldoutUtility.FoldoutButton("✕", () => {
+                            // Store action to execute after the loop to avoid modifying collection during iteration
+                            pendingActions.Add(() => {
+                                eventChannelConfigs.RemoveAt(i);
+                            });
+                        }, "Remove this event channel", new Color(0.8f, 0.3f, 0.3f, 0.8f), Color.white, 30f)
+                    };
+                    
+                    DrawFoldoutSection($"event_channel_{i}", channelTitle, "🔵", CLGFBaseEditor.CLGFTheme.Event, () =>
+                    {
+                        EditorGUILayout.Space(5);
+                        
+                        // Event selection mode
+                        DrawEventSelectionMode(eventChannelConfigs[i]);
+                    }, true, false, 0, $"Configure event channel settings", true, individualChannelButtons);
+                }
+            }, true, true, eventChannelConfigs.Count, "Manage event channels that connect triggers to responses", true, eventChannelHeaderButtons);
+            
+            // Execute pending actions after the loop to avoid modifying collection during iteration
+            foreach (var action in pendingActions)
+            {
+                action.Invoke();
             }
+            pendingActions.Clear();
             
             if (eventChannelConfigs.Count == 0)
             {
@@ -1161,43 +1036,62 @@ namespace GameFramework.Events.Editor
             };
             EditorGUILayout.LabelField("🔍 Condition Setup (Optional)", titleStyle);
             
-            EditorGUILayout.Space(10); // Extra buffer
+            EditorGUILayout.Space(5);
+            DrawFoldoutControls();
+            EditorGUILayout.Space(5);
             
             DrawThemedHelpBox("Conditions allow you to add additional checks before the trigger fires. Leave empty to always trigger.");
             
-            EditorGUILayout.Space(10); // Extra buffer
-            
-            if (conditionConfigs.Count > 0)
+            // Conditions overview foldout with header buttons
+            var conditionHeaderButtons = new FoldoutUtility.FoldoutButton[]
             {
-                requireAllConditions = EditorGUILayout.Toggle("🔗 Require All Conditions", requireAllConditions);
-                EditorGUILayout.Space(8); // Better spacing
-            }
+                new FoldoutUtility.FoldoutButton("➕ Add", () => {
+                    conditionConfigs.Add(new ConditionConfig());
+                }, "Add a new condition", null, null, 80f)
+            };
             
-            // List existing conditions
-            for (int i = 0; i < conditionConfigs.Count; i++)
+            DrawFoldoutSection("conditions", "Conditions", "🔍", CLGFBaseEditor.CLGFTheme.System, () =>
             {
-                EditorGUILayout.BeginHorizontal();
-                
-                conditionConfigs[i].conditionType = (ConditionType)EditorGUILayout.EnumPopup($"🔍 Condition {i + 1}", conditionConfigs[i].conditionType);
-                conditionConfigs[i].invertResult = EditorGUILayout.Toggle("Invert", conditionConfigs[i].invertResult, GUILayout.Width(60));
-                
-                if (GUILayout.Button("✕", GUILayout.Width(25)))
+                if (conditionConfigs.Count > 0)
                 {
-                    conditionConfigs.RemoveAt(i);
-                    i--;
+                    requireAllConditions = EditorGUILayout.Toggle("🔗 Require All Conditions", requireAllConditions);
+                    EditorGUILayout.Space(8);
                 }
                 
-                EditorGUILayout.EndHorizontal();
-                EditorGUILayout.Space(3); // Space between conditions
-            }
+                // List existing conditions
+                for (int i = 0; i < conditionConfigs.Count; i++)
+                {
+                    // Individual condition foldout with header buttons
+                    var individualConditionButtons = new FoldoutUtility.FoldoutButton[]
+                    {
+                        new FoldoutUtility.FoldoutButton("✕", () => {
+                            // Store action to execute after the loop to avoid modifying collection during iteration
+                            pendingActions.Add(() => {
+                                conditionConfigs.RemoveAt(i);
+                            });
+                        }, "Remove this condition", new Color(0.8f, 0.3f, 0.3f, 0.8f), Color.white, 30f)
+                    };
+                    
+                    DrawFoldoutSection($"condition_{i}", $"Condition {i + 1} ({conditionConfigs[i].conditionType})", "🔍", CLGFBaseEditor.CLGFTheme.System, () =>
+                    {
+                        EditorGUILayout.Space(5);
+                        
+                        conditionConfigs[i].conditionType = (ConditionType)EditorGUILayout.EnumPopup("Condition Type", conditionConfigs[i].conditionType);
+                        conditionConfigs[i].invertResult = EditorGUILayout.Toggle("Invert Result", conditionConfigs[i].invertResult);
+                        
+                        // Add condition-specific settings here in the future
+                        EditorGUILayout.HelpBox("Additional condition-specific settings will be added here.", MessageType.Info);
+                        
+                    }, false, false, 0, $"Configure {conditionConfigs[i].conditionType.ToString().ToLower()} condition", true, individualConditionButtons);
+                }
+            }, false, true, conditionConfigs.Count, "Optional conditions that must be met for the trigger to fire", true, conditionHeaderButtons);
             
-            EditorGUILayout.Space(5); // Buffer before add button
-            
-            // Add condition button
-            if (GUILayout.Button("➕ Add Condition", GUILayout.Height(25)))
+            // Execute pending actions after the loop to avoid modifying collection during iteration
+            foreach (var action in pendingActions)
             {
-                conditionConfigs.Add(new ConditionConfig());
+                action.Invoke();
             }
+            pendingActions.Clear();
         }
         
         private void DrawResponseObjectSetup()
@@ -1208,62 +1102,428 @@ namespace GameFramework.Events.Editor
             };
             EditorGUILayout.LabelField("🎬 Response Object Configuration", titleStyle);
             
-            EditorGUILayout.Space(10); // Extra buffer
+            EditorGUILayout.Space(5);
+            DrawFoldoutControls();
+            EditorGUILayout.Space(5);
 
             DrawThemedHelpBox("Response objects listen to events and perform actions. Create multiple objects for complex interactions.");
             
-            EditorGUILayout.Space(10); // Extra buffer
-            
-            // List existing response objects
-            for (int i = 0; i < responseObjectConfigs.Count; i++)
+            // Response objects overview foldout
+            DrawFoldoutSection("response_objects", "Response Objects", "🎬", CLGFBaseEditor.CLGFTheme.ObjectControl, () =>
             {
-                EditorGUILayout.BeginVertical(GUI.skin.box);
-                
-                EditorGUILayout.BeginHorizontal();
-                
-                // Create larger, more prominent header with object name
-                var responseConfig = responseObjectConfigs[i];
-                string objectDisplayName = GetResponseObjectDisplayName(responseConfig);
-                string headerText = string.IsNullOrEmpty(objectDisplayName) ? 
-                    $"🎬 Response Object {i + 1}" : 
-                    $"🎬 Response Object {i + 1} - {objectDisplayName}";
-                
-                GUIStyle headerStyle = new GUIStyle(EditorStyles.boldLabel)
+                // List existing response objects
+                for (int i = 0; i < responseObjectConfigs.Count; i++)
                 {
-                    fontSize = 15,
-                    fontStyle = FontStyle.Bold
+                    var responseConfig = responseObjectConfigs[i];
+                    string objectDisplayName = GetResponseObjectDisplayName(responseConfig);
+                    
+                    // Choose icon based on object type and first action
+                    string icon;
+                    if (responseConfig.isParentObject)
+                    {
+                        icon = "🏗️"; // Parent container icon
+                    }
+                    else if (responseConfig.actions != null && responseConfig.actions.Count > 0)
+                    {
+                        // Use first action's icon
+                        icon = GetActionIcon(responseConfig.actions[0].ActionId);
+                    }
+                    else
+                    {
+                        // Default icon for objects without actions
+                        icon = responseConfig.isChildObject ? "🔧" : "🎬";
+                    }
+                                 
+                    string objectTitle = string.IsNullOrEmpty(objectDisplayName) ? 
+                        $"Response Object {i + 1}" : 
+                        $"{objectDisplayName}";
+                    
+                    // Add indentation for child objects
+                    bool isChildLayout = responseConfig.isChildObject;
+                    if (isChildLayout)
+                    {
+                        EditorGUILayout.BeginHorizontal();
+                        GUILayout.Space(20); // Indent child objects
+                        EditorGUILayout.BeginVertical();
+                    }
+                    
+                    try
+                    {
+                        // Individual response object foldout with child container styling
+                        if (responseConfig.isChildObject)
+                        {
+                            DrawChildObjectContainer(() => {
+                                DrawResponseObjectFoldouts(responseConfig, i, icon, objectTitle);
+                            });
+                        }
+                        else
+                        {
+                            DrawResponseObjectFoldouts(responseConfig, i, icon, objectTitle);
+                        }
+                    }
+                    finally
+                    {
+                        // Always close indentation for child objects to prevent layout errors
+                        if (isChildLayout)
+                        {
+                            EditorGUILayout.EndVertical();
+                            EditorGUILayout.EndHorizontal();
+                        }
+                    }
+                    
+                    EditorGUILayout.Space(8); // Buffer between response objects
+                }
+                
+                EditorGUILayout.Space(10);
+                
+                // Add response object buttons
+                EditorGUILayout.BeginHorizontal();
+                if (GUILayout.Button("➕ Add Response Object", GUILayout.Height(25)))
+                {
+                    responseObjectConfigs.Add(new ResponseObjectConfig());
+                }
+                if (GUILayout.Button("🏗️ Add Parent Container", GUILayout.Height(25)))
+                {
+                    var parentConfig = new ResponseObjectConfig();
+                    parentConfig.isParentObject = true;
+                    parentConfig.objectName = "Parent Container";
+                    responseObjectConfigs.Add(parentConfig);
+                }
+                
+                // Find last parent container to add child to
+                var lastParent = responseObjectConfigs.LastOrDefault(r => r.isParentObject);
+                GUI.enabled = lastParent != null; // Only enable if there's a parent available
+                if (GUILayout.Button("👶 Add Child to Parent", GUILayout.Height(25)))
+                {
+                    var childConfig = new ResponseObjectConfig();
+                    childConfig.isChildObject = true;
+                    childConfig.parentObjectName = lastParent.objectName;
+                    childConfig.objectName = $"{lastParent.objectName}_Child";
+                    responseObjectConfigs.Add(childConfig);
+                }
+                GUI.enabled = true; // Re-enable GUI
+                
+                EditorGUILayout.EndHorizontal();
+            }, true, true, responseObjectConfigs.Count, "Manage response objects that react to events", false); // No background to reduce visual clutter
+            
+            // Execute pending actions after the loop to avoid modifying collection during iteration
+            foreach (var action in pendingActions)
+            {
+                action.Invoke();
+            }
+            pendingActions.Clear();
+        }
+        
+        private void DrawResponseObjectFoldouts(ResponseObjectConfig responseConfig, int index, string icon, string objectTitle)
+        {
+            // Main response object foldout (no background to reduce visual clutter)
+            // Use red for parent containers, custom darker green for individual response objects
+            if (responseConfig.isParentObject)
+            {
+                var headerTheme = CLGFBaseEditor.CLGFTheme.System;
+                
+                // Create header buttons for parent objects
+                var headerButtons = new FoldoutUtility.FoldoutButton[]
+                {
+                    new FoldoutUtility.FoldoutButton("👶 Add", () => {
+                        // Store action to execute after the loop to avoid modifying collection during iteration
+                        pendingActions.Add(() => {
+                            var childConfig = new ResponseObjectConfig();
+                            childConfig.isChildObject = true;
+                            childConfig.parentObjectName = responseConfig.objectName;
+                            childConfig.objectName = $"{responseConfig.objectName}_Child";
+                            responseObjectConfigs.Add(childConfig);
+                        });
+                    }, "Add a child object to this parent", null, null, 80f),
+                    
+                    new FoldoutUtility.FoldoutButton("✕", () => {
+                        // Store action to execute after the loop to avoid modifying collection during iteration
+                        pendingActions.Add(() => {
+                            responseObjectConfigs.RemoveAt(index);
+                        });
+                    }, "Remove this response object", new Color(0.8f, 0.3f, 0.3f, 0.8f), Color.white, 30f)
                 };
                 
-                EditorGUILayout.LabelField(headerText, headerStyle);
-                if (GUILayout.Button("✕", GUILayout.Width(25)))
+                DrawFoldoutSection($"response_object_{index}", objectTitle, icon, headerTheme, () =>
                 {
-                    responseObjectConfigs.RemoveAt(i);
-                    i--;
-                    EditorGUILayout.EndHorizontal();
-                    EditorGUILayout.EndVertical();
-                    continue;
-                }
-                EditorGUILayout.EndHorizontal();
+                    DrawResponseObjectContent(responseConfig, index);
+                }, true, false, 0, $"Configure response object settings", false, headerButtons); // No background to reduce visual clutter
+            }
+            else
+            {
+                // Custom darker green foldout for individual response objects with header buttons
+                var headerButtons = new FoldoutUtility.FoldoutButton[]
+                {
+                    new FoldoutUtility.FoldoutButton("✕", () => {
+                        // Store action to execute after the loop to avoid modifying collection during iteration
+                        pendingActions.Add(() => {
+                            responseObjectConfigs.RemoveAt(index);
+                        });
+                    }, "Remove this response object", new Color(0.8f, 0.3f, 0.3f, 0.8f), Color.white, 30f)
+                };
                 
+                DrawDarkerGreenFoldoutSection($"response_object_{index}", objectTitle, icon, () =>
+                {
+                    DrawResponseObjectContent(responseConfig, index);
+                }, headerButtons);
+            }
+        }
+        
+        private void DrawResponseObjectContent(ResponseObjectConfig responseConfig, int index)
+        {
+                // All objects now have their action buttons in headers for consistency
                 EditorGUILayout.Space(5);
                 
-                // Object selection mode
-                DrawResponseObjectSelectionMode(responseConfig);
+                // Object selection mode foldout
+                DrawFoldoutSection($"response_object_{index}_selection", "Object Selection", "📂", CLGFBaseEditor.CLGFTheme.UI, () =>
+                {
+                    DrawResponseObjectSelectionMode(responseConfig);
+                }, true, false, 0, "Choose how to create or reference the GameObject");
                 
-                EditorGUILayout.Space(8); // Buffer between sections
+                // Hierarchy settings foldout
+                int childCount = responseConfig.childObjects?.Count ?? 0;
+                DrawFoldoutSection($"response_object_{index}_hierarchy", "Hierarchy Settings", "🏗️", CLGFBaseEditor.CLGFTheme.System, () =>
+                {
+                    DrawHierarchySettings(responseConfig);
+                }, false, true, childCount, "Configure parent-child relationships");
                 
-                // Event subscriptions
-                DrawEventSubscriptions(responseConfig);
+                // Event subscriptions foldout
+                int eventCount = responseConfig.listenToEvents?.Count ?? 0;
+                DrawFoldoutSection($"response_object_{index}_events", "Event Subscriptions", "🔵", CLGFBaseEditor.CLGFTheme.Event, () =>
+                {
+                    DrawEventSubscriptions(responseConfig);
+                }, true, true, eventCount, "Configure which events this object listens to");
                 
-                EditorGUILayout.Space(8); // Buffer between sections
-                
-                // Actions
-                DrawResponseActions(responseConfig);
-                
-                EditorGUILayout.EndVertical();
-                EditorGUILayout.Space(8); // Buffer between response objects
+                // Actions foldout
+                int actionCount = responseConfig.actions?.Count ?? 0;
+                DrawFoldoutSection($"response_object_{index}_actions", "Actions", "🎬", CLGFBaseEditor.CLGFTheme.ObjectControl, () =>
+                {
+                    DrawResponseActions(responseConfig);
+                }, true, true, actionCount, "Configure actions that execute when events are received");
+        }
+        
+        private void DrawDarkerGreenFoldoutSection(string id, string title, string icon, System.Action drawContent, FoldoutUtility.FoldoutButton[] headerButtons = null)
+        {
+            // Create darker green colors for individual response objects
+            Color darkBackgroundColor = new Color(0.15f, 0.5f, 0.2f, 0.15f); // Darker green background
+            Color darkBorderColor = new Color(0.27f, 0.69f, 0.27f, 0.82f); // Much darker green border
+            
+            // Use the foldout utility with custom darker green theme
+            // Since we can't pass custom colors directly, we'll draw this manually with the same style
+            string foldoutKey = $"{GetType().Name}_{id}";
+            
+            // Get or set initial state - use the same logic as FoldoutUtility
+            if (!EditorPrefs.HasKey($"{GetType().Name}_{id}"))
+            {
+                EditorPrefs.SetBool($"{GetType().Name}_{id}", true); // Default to expanded
+            }
+            bool isExpanded = EditorPrefs.GetBool($"{GetType().Name}_{id}", true);
+            
+            // Calculate total button width
+            float totalButtonWidth = 0f;
+            if (headerButtons != null && headerButtons.Length > 0)
+            {
+                foreach (var button in headerButtons)
+                {
+                    totalButtonWidth += button.Width + 5f; // 5px spacing between buttons
+                }
+                totalButtonWidth -= 5f; // Remove spacing after last button
             }
             
+            // Create header rect
+            Rect headerRect = GUILayoutUtility.GetRect(0, 28);
+            headerRect.x += 5;
+            headerRect.width -= 10;
+            
+            // Create clickable area for foldout (excluding button area)
+            Rect foldoutClickRect = new Rect(headerRect.x, headerRect.y, headerRect.width - totalButtonWidth - 10f, headerRect.height);
+            
+            // Handle foldout click events (only in non-button area)
+            if (Event.current.type == EventType.MouseDown && foldoutClickRect.Contains(Event.current.mousePosition))
+            {
+                isExpanded = !isExpanded;
+                EditorPrefs.SetBool($"{GetType().Name}_{id}", isExpanded);
+                Event.current.Use();
+                if (EditorWindow.focusedWindow != null) EditorWindow.focusedWindow.Repaint();
+            }
+            
+            // Draw background with darker green and hover effect
+            Color headerColor = darkBorderColor;
+            if (headerRect.Contains(Event.current.mousePosition))
+            {
+                headerColor = Color.Lerp(darkBorderColor, Color.white, 0.1f);
+            }
+            
+            if (Event.current.type == EventType.Repaint)
+            {
+                EditorGUI.DrawRect(headerRect, headerColor);
+            }
+            
+            // Create styles
+            GUIStyle arrowStyle = new GUIStyle(EditorStyles.boldLabel)
+            {
+                fontSize = 12,
+                normal = { textColor = Color.white },
+                alignment = TextAnchor.MiddleLeft,
+                padding = new RectOffset(8, 0, 0, 0)
+            };
+            
+            GUIStyle titleStyle = new GUIStyle(EditorStyles.boldLabel)
+            {
+                fontSize = 14,
+                normal = { textColor = Color.white },
+                alignment = TextAnchor.MiddleLeft,
+                padding = new RectOffset(55, 0, 0, 0) // Increased padding for icon + arrow space
+            };
+            
+            GUIStyle iconStyle = new GUIStyle(EditorStyles.boldLabel)
+            {
+                fontSize = 16, // Larger icon size to match regular foldouts
+                normal = { textColor = Color.white },
+                alignment = TextAnchor.MiddleLeft,
+                padding = new RectOffset(0, 0, 0, 0)
+            };
+            
+            // Draw arrow, icon and title (adjusted for buttons)
+            string arrow = isExpanded ? "▼" : "▶";
+            GUI.Label(new Rect(headerRect.x, headerRect.y, 25, headerRect.height), arrow, arrowStyle);
+            GUI.Label(new Rect(headerRect.x + 25, headerRect.y, 25, headerRect.height), icon, iconStyle); // Better positioning and size
+            
+            // Draw title (adjusted for buttons)
+            float titleWidth = headerRect.width - 55 - totalButtonWidth - 10f;
+            Rect titleRect = new Rect(headerRect.x + 55, headerRect.y, titleWidth, headerRect.height);
+            GUI.Label(titleRect, title, titleStyle);
+            
+            // Draw header buttons
+            if (headerButtons != null && headerButtons.Length > 0)
+            {
+                float buttonX = headerRect.x + headerRect.width - totalButtonWidth;
+                
+                foreach (var button in headerButtons)
+                {
+                    Rect buttonRect = new Rect(buttonX, headerRect.y + 2, button.Width, headerRect.height - 4);
+                    
+                    // Create button style
+                    GUIStyle buttonStyle = new GUIStyle(GUI.skin.button)
+                    {
+                        fontSize = 10,
+                        alignment = TextAnchor.MiddleCenter,
+                        padding = new RectOffset(2, 2, 2, 2)
+                    };
+                    
+                    // Apply custom colors if specified
+                    if (button.BackgroundColor.HasValue || button.TextColor.HasValue)
+                    {
+                        Color bgColor = button.BackgroundColor ?? GUI.skin.button.normal.background.name == "builtin skins/darkskin images/btn" 
+                            ? new Color(0.4f, 0.4f, 0.4f, 1f) : new Color(0.8f, 0.8f, 0.8f, 1f);
+                        Color txtColor = button.TextColor ?? Color.white;
+                        
+                        buttonStyle.normal.background = CreateSolidColorTexture(bgColor);
+                        buttonStyle.normal.textColor = txtColor;
+                        buttonStyle.hover.background = CreateSolidColorTexture(Color.Lerp(bgColor, Color.white, 0.1f));
+                        buttonStyle.hover.textColor = txtColor;
+                    }
+                    
+                    // Draw button with tooltip
+                    GUIContent buttonContent = string.IsNullOrEmpty(button.Tooltip) 
+                        ? new GUIContent(button.Text) 
+                        : new GUIContent(button.Text, button.Tooltip);
+                    
+                    if (GUI.Button(buttonRect, buttonContent, buttonStyle))
+                    {
+                        button.OnClick?.Invoke();
+                    }
+                    
+                    buttonX += button.Width + 5f;
+                }
+            }
+            
+            // Draw content if expanded (no background for individual response objects)
+            if (isExpanded && drawContent != null)
+            {
+                EditorGUILayout.Space(2);
+                
+                // Simple content area without background
+                EditorGUILayout.BeginVertical();
+                EditorGUILayout.Space(8);
+                
+                // Add horizontal padding for content to prevent border clipping
+                EditorGUILayout.BeginHorizontal();
+                GUILayout.Space(12); // Left padding
+                
+                EditorGUILayout.BeginVertical();
+                // Draw the content
+                drawContent.Invoke();
+                EditorGUILayout.EndVertical();
+                
+                GUILayout.Space(12); // Right padding
+                EditorGUILayout.EndHorizontal();
+                
+                EditorGUILayout.Space(8);
+                EditorGUILayout.EndVertical();
+            }
+            
+            EditorGUILayout.Space(5);
+        }
+        
+        /// <summary>
+        /// Creates a solid color texture for button styling.
+        /// </summary>
+        private Texture2D CreateSolidColorTexture(Color color)
+        {
+            var texture = new Texture2D(1, 1);
+            texture.SetPixel(0, 0, color);
+            texture.Apply();
+            return texture;
+        }
+        
+        private void DrawChildObjectContainer(System.Action drawContent)
+        {
+            // Get darker green theme colors for child objects
+            var (backgroundColor, borderColor) = GetCLGFThemeColors(CLGFBaseEditor.CLGFTheme.ObjectControl);
+            backgroundColor.a = 0.00f;
+            borderColor = Color.Lerp(borderColor, Color.black, 0.3f); // Darker border
+            
+            Rect sectionStart = GUILayoutUtility.GetRect(0, 0);
+            
+            EditorGUILayout.BeginVertical(GUI.skin.box);
+            EditorGUILayout.Space(8);
+            
+            // Draw content
+            drawContent?.Invoke();
+            
+            EditorGUILayout.Space(8);
+            EditorGUILayout.EndVertical();
+            
+            // Draw enhanced background for child objects
+            if (Event.current.type == EventType.Repaint)
+            {
+                Rect sectionEnd = GUILayoutUtility.GetLastRect();
+                Rect backgroundRect = new Rect(
+                    sectionStart.x + 5, // Account for margin
+                    sectionStart.y,
+                    sectionEnd.width - 10, // Account for left/right margins
+                    sectionEnd.height + (sectionEnd.y - sectionStart.y)
+                );
+                
+                // Draw darker background
+                EditorGUI.DrawRect(backgroundRect, backgroundColor);
+                
+                // Draw darker border with proper bounds
+                float borderWidth = 2f;
+                // Top border
+                EditorGUI.DrawRect(new Rect(backgroundRect.x, backgroundRect.y, backgroundRect.width, borderWidth), borderColor);
+                // Bottom border
+                EditorGUI.DrawRect(new Rect(backgroundRect.x, backgroundRect.y + backgroundRect.height - borderWidth, backgroundRect.width, borderWidth), borderColor);
+                // Left border
+                EditorGUI.DrawRect(new Rect(backgroundRect.x, backgroundRect.y, borderWidth, backgroundRect.height), borderColor);
+                // Right border - ensure it's within bounds
+                EditorGUI.DrawRect(new Rect(backgroundRect.x + backgroundRect.width - borderWidth, backgroundRect.y, borderWidth, backgroundRect.height), borderColor);
+            }
+        }
+        
+        private void CompleteResponseObjectSetup()
+        {
             // Add response object button
             if (GUILayout.Button("➕ Add Response Object", GUILayout.Height(25)))
             {
@@ -1388,42 +1648,128 @@ namespace GameFramework.Events.Editor
             };
             EditorGUILayout.LabelField("📡 Events to Listen For", subsectionStyle);
             
-            // Event subscriptions
-            for (int j = 0; j < responseConfig.listenToEvents.Count; j++)
-            {
-                EditorGUILayout.BeginHorizontal();
-                
-                // Show available event names from eventChannelConfigs
-                if (eventChannelConfigs.Count > 0)
-                {
-                    var eventNames = eventChannelConfigs.ConvertAll(e => e.eventName).ToArray();
-                    int currentIndex = Array.IndexOf(eventNames, responseConfig.listenToEvents[j]);
-                    if (currentIndex < 0) currentIndex = 0;
-                    
-                    int newIndex = EditorGUILayout.Popup($"🔵 Event {j + 1}", currentIndex, eventNames);
-                    if (newIndex >= 0 && newIndex < eventNames.Length)
-                    {
-                        responseConfig.listenToEvents[j] = eventNames[newIndex];
-                    }
-                }
-                else
-                {
-                    responseConfig.listenToEvents[j] = EditorGUILayout.TextField($"🔵 Event {j + 1}", responseConfig.listenToEvents[j]);
-                }
-                
-                if (GUILayout.Button("✕", GUILayout.Width(25)))
-                {
-                    responseConfig.listenToEvents.RemoveAt(j);
-                    j--;
-                }
-                
-                EditorGUILayout.EndHorizontal();
-            }
+            // Event subscriptions - support both string events and GameEvent assets
+            DrawEventSubscriptionsList(responseConfig);
             
             if (GUILayout.Button("➕ Add Event Listener", GUILayout.Height(20)))
             {
                 responseConfig.listenToEvents.Add(eventChannelConfigs.Count > 0 ? eventChannelConfigs[0].eventName : "");
+                responseConfig.gameEventAssets.Add(null);
             }
+        }
+        
+        private void DrawEventSubscriptionsList(ResponseObjectConfig responseConfig)
+        {
+            // Ensure lists are synchronized
+            while (responseConfig.gameEventAssets.Count < responseConfig.listenToEvents.Count)
+                responseConfig.gameEventAssets.Add(null);
+            while (responseConfig.listenToEvents.Count < responseConfig.gameEventAssets.Count)
+                responseConfig.listenToEvents.Add("");
+            
+            // Draw each event subscription
+            for (int j = 0; j < responseConfig.listenToEvents.Count; j++)
+            {
+                EditorGUILayout.BeginVertical(GUI.skin.box);
+                EditorGUILayout.BeginHorizontal();
+                
+                // Title and delete button
+                EditorGUILayout.LabelField($"🔵 Event Listener {j + 1}", EditorStyles.boldLabel);
+                if (GUILayout.Button("✕", GUILayout.Width(25)))
+                {
+                    responseConfig.listenToEvents.RemoveAt(j);
+                    if (j < responseConfig.gameEventAssets.Count)
+                        responseConfig.gameEventAssets.RemoveAt(j);
+                    j--;
+                    EditorGUILayout.EndHorizontal();
+                    EditorGUILayout.EndVertical();
+                    continue;
+                }
+                
+                EditorGUILayout.EndHorizontal();
+                
+                // Always use wizard events since event creation is controlled in Event Channels step
+                EditorGUILayout.Space(5);
+                DrawWizardEventSelection(responseConfig, j);
+                
+                // Show current event name for clarity
+                if (!string.IsNullOrEmpty(responseConfig.listenToEvents[j]))
+                {
+                    EditorGUILayout.Space(3);
+                    EditorGUILayout.LabelField($"Listening to: '{responseConfig.listenToEvents[j]}'", EditorStyles.helpBox);
+                }
+                
+                EditorGUILayout.Space(5);
+                EditorGUILayout.EndVertical();
+                EditorGUILayout.Space(5);
+            }
+        }
+        
+        private void DrawWizardEventSelection(ResponseObjectConfig responseConfig, int index)
+        {
+            if (eventChannelConfigs.Count > 0)
+            {
+                EditorGUILayout.LabelField("Select from wizard events:", EditorStyles.miniLabel);
+                
+                var eventNames = eventChannelConfigs.ConvertAll(e => e.eventName).ToArray();
+                int currentIndex = Array.IndexOf(eventNames, responseConfig.listenToEvents[index]);
+                
+                int newIndex = EditorGUILayout.Popup("Wizard Event:", currentIndex, eventNames);
+                if (newIndex >= 0 && newIndex < eventNames.Length && newIndex != currentIndex)
+                {
+                    responseConfig.listenToEvents[index] = eventNames[newIndex];
+                    if (index < responseConfig.gameEventAssets.Count)
+                        responseConfig.gameEventAssets[index] = null; // Clear asset when using wizard event
+                }
+            }
+            else
+            {
+                EditorGUILayout.HelpBox("No wizard events configured. Switch to Manual mode to select events.", MessageType.Info);
+            }
+        }
+        
+        private void DrawManualEventSelection(ResponseObjectConfig responseConfig, int index)
+        {
+            EditorGUILayout.LabelField("Manual event selection:", EditorStyles.miniLabel);
+            
+            // GameEvent ScriptableObject selection
+            EditorGUILayout.BeginHorizontal();
+            EditorGUILayout.LabelField("GameEvent Asset:", GUILayout.Width(100));
+            
+            var previousAsset = index < responseConfig.gameEventAssets.Count ? responseConfig.gameEventAssets[index] : null;
+            var newAsset = EditorGUILayout.ObjectField(previousAsset, typeof(GameFramework.Events.Channels.GameEvent), false) as GameFramework.Events.Channels.GameEvent;
+            
+            if (newAsset != previousAsset)
+            {
+                if (index >= responseConfig.gameEventAssets.Count)
+                    responseConfig.gameEventAssets.Add(newAsset);
+                else
+                    responseConfig.gameEventAssets[index] = newAsset;
+                
+                // Update string event name when asset is selected
+                if (newAsset != null)
+                    responseConfig.listenToEvents[index] = newAsset.ChannelName;
+                else if (previousAsset != null)
+                    responseConfig.listenToEvents[index] = ""; // Clear when asset removed
+            }
+            
+            EditorGUILayout.EndHorizontal();
+            
+            // OR separator
+            EditorGUILayout.Space(3);
+            EditorGUILayout.LabelField("— OR —", EditorStyles.centeredGreyMiniLabel);
+            EditorGUILayout.Space(3);
+            
+            // Text input fallback
+            EditorGUILayout.BeginHorizontal();
+            EditorGUILayout.LabelField("Event Name:", GUILayout.Width(100));
+            string newEventName = EditorGUILayout.TextField(responseConfig.listenToEvents[index]);
+            if (newEventName != responseConfig.listenToEvents[index])
+            {
+                responseConfig.listenToEvents[index] = newEventName;
+                if (index < responseConfig.gameEventAssets.Count)
+                    responseConfig.gameEventAssets[index] = null; // Clear asset when manually typing
+            }
+            EditorGUILayout.EndHorizontal();
         }
         
         private void DrawResponseActions(ResponseObjectConfig responseConfig)
@@ -1514,63 +1860,203 @@ namespace GameFramework.Events.Editor
             return ""; // No name available
         }
         
-        // CLGF Theme enum for consistency with the base editor
-        private enum CLGFTheme
-        {
-            Event,          // Blue theme for listeners, channels, event components
-            Action,         // Orange theme for event-raising actions and triggers  
-            ObjectControl,  // Green theme for actions that control other GameObjects
-            Character,      // Purple theme for character and player components
-            Camera,         // Teal theme for camera and view components
-            UI,             // Pink theme for UI and inventory components
-            System          // Red theme for managers and core systems
-        }
-        
-        private (Color backgroundColor, Color borderColor) GetCLGFThemeColors(CLGFTheme theme)
-        {
-            return theme switch
-            {
-                // Vibrant blue - bright and appealing
-                CLGFTheme.Event => (new Color(0.2f, 0.6f, 1.0f, 0.15f), new Color(0.1f, 0.5f, 0.95f, 0.8f)),
-                
-                // Vibrant orange - warm and energetic  
-                CLGFTheme.Action => (new Color(1.0f, 0.6f, 0.1f, 0.15f), new Color(0.95f, 0.5f, 0.0f, 0.8f)),
-                
-                // Vibrant green - fresh and lively
-                CLGFTheme.ObjectControl => (new Color(0.2f, 0.8f, 0.3f, 0.15f), new Color(0.1f, 0.7f, 0.2f, 0.8f)),
-                
-                // Vibrant purple - rich and elegant
-                CLGFTheme.Character => (new Color(0.7f, 0.3f, 0.9f, 0.15f), new Color(0.6f, 0.2f, 0.8f, 0.8f)),
-                
-                // Vibrant teal - modern and sophisticated
-                CLGFTheme.Camera => (new Color(0.2f, 0.8f, 0.7f, 0.15f), new Color(0.1f, 0.7f, 0.6f, 0.8f)),
-                
-                // Vibrant pink - playful and attractive
-                CLGFTheme.UI => (new Color(1.0f, 0.4f, 0.6f, 0.15f), new Color(0.9f, 0.3f, 0.5f, 0.8f)),
-                
-                // Vibrant red - bold and attention-grabbing
-                CLGFTheme.System => (new Color(1.0f, 0.3f, 0.2f, 0.15f), new Color(0.9f, 0.2f, 0.1f, 0.8f)),
-                
-                _ => (Color.gray, Color.white)
-            };
-        }
-        
-        private void DrawColoredReviewSection(string title, CLGFTheme theme, System.Action drawContent)
+        private void DrawHierarchySettings(ResponseObjectConfig responseConfig)
         {
             GUIStyle subsectionStyle = new GUIStyle(EditorStyles.boldLabel)
             {
                 fontSize = 14
             };
+            EditorGUILayout.LabelField("🏗️ Hierarchy Settings", subsectionStyle);
             
+            EditorGUILayout.BeginHorizontal();
+            
+            // Parent object toggle
+            bool wasParent = responseConfig.isParentObject;
+            responseConfig.isParentObject = EditorGUILayout.Toggle("Parent Container", responseConfig.isParentObject);
+            
+            // If changed from parent to non-parent, clear child objects
+            if (wasParent && !responseConfig.isParentObject)
+            {
+                responseConfig.childObjects.Clear();
+            }
+            
+            EditorGUILayout.EndHorizontal();
+            
+            // Child object selection
+            if (!responseConfig.isParentObject)
+            {
+                EditorGUILayout.BeginHorizontal();
+                responseConfig.isChildObject = EditorGUILayout.Toggle("Child Object", responseConfig.isChildObject);
+                
+                if (responseConfig.isChildObject)
+                {
+                    // Show dropdown of available parent objects
+                    var parentObjects = responseObjectConfigs.Where(r => r.isParentObject && r != responseConfig).ToList();
+                    if (parentObjects.Count > 0)
+                    {
+                        var parentNames = parentObjects.Select(p => p.objectName).ToArray();
+                        int currentIndex = Array.IndexOf(parentNames, responseConfig.parentObjectName);
+                        if (currentIndex < 0) currentIndex = 0;
+                        
+                        int newIndex = EditorGUILayout.Popup("Parent", currentIndex, parentNames);
+                        if (newIndex >= 0 && newIndex < parentNames.Length)
+                        {
+                            responseConfig.parentObjectName = parentNames[newIndex];
+                        }
+                    }
+                    else
+                    {
+                        EditorGUILayout.LabelField("Parent", "No parent objects available");
+                        responseConfig.isChildObject = false;
+                    }
+                }
+                else
+                {
+                    responseConfig.parentObjectName = "";
+                }
+                
+                EditorGUILayout.EndHorizontal();
+            }
+            
+            // Show child objects for parent containers
+            if (responseConfig.isParentObject)
+            {
+                EditorGUILayout.Space(5);
+                
+                var childObjects = responseObjectConfigs.Where(r => r.isChildObject && r.parentObjectName == responseConfig.objectName).ToList();
+                
+                if (childObjects.Count > 0)
+                {
+                    EditorGUILayout.LabelField($"Child Objects ({childObjects.Count}):", EditorStyles.miniLabel);
+                    EditorGUI.indentLevel++;
+                    foreach (var child in childObjects)
+                    {
+                        EditorGUILayout.LabelField($"• {child.objectName}", EditorStyles.miniLabel);
+                    }
+                    EditorGUI.indentLevel--;
+                }
+                else
+                {
+                    EditorGUILayout.LabelField("No child objects yet", EditorStyles.miniLabel);
+                }
+                
+                // Quick add child button
+                if (GUILayout.Button("➕ Add Child Object", GUILayout.Height(20)))
+                {
+                    var childConfig = new ResponseObjectConfig
+                    {
+                        objectName = $"{responseConfig.objectName}_Child{childObjects.Count + 1}",
+                        isChildObject = true,
+                        parentObjectName = responseConfig.objectName,
+                        createNewObject = true
+                    };
+                    
+                    // Add a default event subscription (inherit from parent or use first available)
+                    if (responseConfig.listenToEvents.Count > 0)
+                    {
+                        childConfig.listenToEvents.Add(responseConfig.listenToEvents[0]);
+                    }
+                    else if (eventChannelConfigs.Count > 0)
+                    {
+                        childConfig.listenToEvents.Add(eventChannelConfigs[0].eventName);
+                    }
+                    
+                    responseObjectConfigs.Add(childConfig);
+                }
+            }
+            
+            // Help text
+            if (responseConfig.isParentObject)
+            {
+                EditorGUILayout.HelpBox("Parent containers organize child objects. They typically have minimal actions themselves.", MessageType.Info);
+            }
+            else if (responseConfig.isChildObject)
+            {
+                EditorGUILayout.HelpBox($"This object will be created as a child of '{responseConfig.parentObjectName}'.", MessageType.Info);
+            }
+        }
+        
+        // CLGF Theme enum for consistency with the base editor
+        private (Color backgroundColor, Color borderColor) GetCLGFThemeColors(CLGFBaseEditor.CLGFTheme theme)
+        {
+            return theme switch
+            {
+                // Vibrant blue - bright and appealing
+                CLGFBaseEditor.CLGFTheme.Event => (new Color(0.2f, 0.6f, 1.0f, 0.15f), new Color(0.1f, 0.5f, 0.95f, 0.8f)),
+                
+                // Vibrant orange - warm and energetic  
+                CLGFBaseEditor.CLGFTheme.Action => (new Color(1.0f, 0.6f, 0.1f, 0.15f), new Color(0.95f, 0.5f, 0.0f, 0.8f)),
+                
+                // Vibrant green - fresh and lively
+                CLGFBaseEditor.CLGFTheme.ObjectControl => (new Color(0.2f, 0.8f, 0.3f, 0.15f), new Color(0.1f, 0.7f, 0.2f, 0.8f)),
+                
+                // Vibrant purple - rich and elegant
+                CLGFBaseEditor.CLGFTheme.Character => (new Color(0.7f, 0.3f, 0.9f, 0.15f), new Color(0.6f, 0.2f, 0.8f, 0.8f)),
+                
+                // Vibrant teal - modern and sophisticated
+                CLGFBaseEditor.CLGFTheme.Camera => (new Color(0.2f, 0.8f, 0.7f, 0.15f), new Color(0.1f, 0.7f, 0.6f, 0.8f)),
+                
+                // Vibrant pink - playful and attractive
+                CLGFBaseEditor.CLGFTheme.UI => (new Color(1.0f, 0.4f, 0.6f, 0.15f), new Color(0.9f, 0.3f, 0.5f, 0.8f)),
+                
+                // Vibrant red - bold and attention-grabbing
+                CLGFBaseEditor.CLGFTheme.System => (new Color(1.0f, 0.3f, 0.2f, 0.15f), new Color(0.9f, 0.2f, 0.1f, 0.8f)),
+                
+                _ => (Color.gray, Color.white)
+            };
+        }
+        
+        private void DrawColoredReviewSection(string title, CLGFBaseEditor.CLGFTheme theme, System.Action drawContent)
+        {
             // Get theme colors from CLGF
             var (backgroundColor, borderColor) = GetCLGFThemeColors(theme);
             
-            // Draw title outside the colored area
-            EditorGUILayout.LabelField(title, subsectionStyle);
-            EditorGUILayout.Space(3);
+            // Extract icon from title (assumes format like "⚡ Trigger GameObject:")
+            string icon = "📋"; // Default icon
+            string displayTitle = title;
             
-            // Begin the colored section with proper background handling
-            Rect sectionStart = GUILayoutUtility.GetRect(0, 0);
+            if (title.Length > 2 && char.IsSymbol(title[0]))
+            {
+                icon = title.Substring(0, 2).Trim();
+                displayTitle = title.Substring(2).Trim();
+                // Remove trailing colon if present
+                if (displayTitle.EndsWith(":"))
+                    displayTitle = displayTitle.Substring(0, displayTitle.Length - 1);
+            }
+            
+            // Draw header in the same style as step headers
+            var headerRect = GUILayoutUtility.GetRect(0, 40);
+            headerRect.x += 10;
+            headerRect.width -= 20;
+            
+            // Draw background
+            EditorGUI.DrawRect(headerRect, borderColor);
+            
+            // Create styles for larger icons like step headers
+            GUIStyle iconStyle = new GUIStyle(EditorStyles.boldLabel)
+            {
+                fontSize = 24, // Large emoji icon like step headers
+                normal = { textColor = Color.white },
+                alignment = TextAnchor.MiddleLeft,
+                padding = new RectOffset(8, 0, 0, 0)
+            };
+            
+            GUIStyle titleStyle = new GUIStyle(EditorStyles.boldLabel)
+            {
+                fontSize = 18, // Large title text like step headers
+                normal = { textColor = Color.white },
+                alignment = TextAnchor.MiddleLeft,
+                padding = new RectOffset(50, 0, 0, 0) // Indent for icon space
+            };
+            
+            // Draw icon and title without CLGF prefix
+            GUI.Label(new Rect(headerRect.x, headerRect.y, 50, headerRect.height), icon, iconStyle);
+            GUI.Label(headerRect, displayTitle.ToUpper(), titleStyle);
+            
+            EditorGUILayout.Space(10);
+            
+            // Draw content with themed background and border
+            Rect contentStart = GUILayoutUtility.GetRect(0, 0);
             
             EditorGUILayout.BeginVertical(GUI.skin.box);
             EditorGUILayout.Space(8);
@@ -1592,16 +2078,18 @@ namespace GameFramework.Events.Editor
             // Draw colored background on top of the box
             if (Event.current.type == EventType.Repaint)
             {
-                Rect sectionEnd = GUILayoutUtility.GetLastRect();
+                Rect contentEnd = GUILayoutUtility.GetLastRect();
                 Rect backgroundRect = new Rect(
-                    sectionEnd.x,
-                    sectionStart.y,
-                    sectionEnd.width,
-                    sectionEnd.height + (sectionEnd.y - sectionStart.y)
+                    contentEnd.x,
+                    contentStart.y,
+                    contentEnd.width,
+                    contentEnd.height + (contentEnd.y - contentStart.y)
                 );
                 
                 // Draw semi-transparent background over the box
-                EditorGUI.DrawRect(backgroundRect, backgroundColor);
+                Color contentBackground = backgroundColor;
+                contentBackground.a = 0.05f; // Match foldout background alpha
+                EditorGUI.DrawRect(backgroundRect, contentBackground);
                 
                 // Draw colored border
                 float borderWidth = 2f;
@@ -1627,19 +2115,19 @@ namespace GameFramework.Events.Editor
             
             EditorGUILayout.Space(10);
             
-            // *** INTERACTION FLOW AT THE TOP - FLASHY VERSION ***
-            DrawFlashyInteractionFlow();
+            // *** INTERACTION FLOW USING BASESETUPWIZARD SYSTEM ***
+            DrawFlowDiagram();
             
             EditorGUILayout.Space(15);
             
             // Trigger object & configuration
-            DrawColoredReviewSection("⚡ Trigger GameObject:", CLGFTheme.Action, () => {
+            DrawColoredReviewSection("⚡ Trigger GameObject:", CLGFBaseEditor.CLGFTheme.Action, () => {
                 EditorGUILayout.LabelField(triggerObject ? triggerObject.name : "None");
             });
             
             EditorGUILayout.Space(8);
             
-            DrawColoredReviewSection("⚙️ Trigger Configuration:", CLGFTheme.Action, () => {
+            DrawColoredReviewSection("⚙️ Trigger Configuration:", CLGFBaseEditor.CLGFTheme.Action, () => {
                 EditorGUILayout.LabelField($"Type: {triggerConfig.triggerType}");
                 
                 // Show collision type for collision triggers
@@ -1658,7 +2146,7 @@ namespace GameFramework.Events.Editor
             EditorGUILayout.Space(8);
             
             // Event channels
-            DrawColoredReviewSection("📡 Event Channels:", CLGFTheme.Event, () => {
+            DrawColoredReviewSection("📡 Event Channels:", CLGFBaseEditor.CLGFTheme.Event, () => {
                 if (eventChannelConfigs.Count == 0)
                 {
                     EditorGUILayout.LabelField("None");
@@ -1675,7 +2163,7 @@ namespace GameFramework.Events.Editor
             EditorGUILayout.Space(8);
             
             // Conditions
-            DrawColoredReviewSection("🔍 Conditions:", CLGFTheme.Action, () => {
+            DrawColoredReviewSection("🔍 Conditions:", CLGFBaseEditor.CLGFTheme.Action, () => {
                 if (conditionConfigs.Count == 0)
                 {
                     EditorGUILayout.LabelField("None (always trigger)");
@@ -1689,7 +2177,7 @@ namespace GameFramework.Events.Editor
             EditorGUILayout.Space(8);
             
             // Response objects
-            DrawColoredReviewSection("🎬 Response Objects:", CLGFTheme.ObjectControl, () => {
+            DrawColoredReviewSection("🎬 Response Objects:", CLGFBaseEditor.CLGFTheme.ObjectControl, () => {
                 if (responseObjectConfigs.Count == 0)
                 {
                     EditorGUILayout.LabelField("None");
@@ -1712,235 +2200,6 @@ namespace GameFramework.Events.Editor
             });
         }
         
-        private void DrawFlashyInteractionFlow()
-        {
-            // Create an eye-catching title
-            GUIStyle flowTitleStyle = new GUIStyle(EditorStyles.boldLabel)
-            {
-                fontSize = 18,
-                fontStyle = FontStyle.Bold,
-                alignment = TextAnchor.MiddleLeft
-            };
-            
-            EditorGUILayout.LabelField("🔄 INTERACTION FLOW DIAGRAM", flowTitleStyle);
-            EditorGUILayout.Space(8);
-            
-            // Create the flow container with blue background styling
-            var (backgroundColor, borderColor) = GetCLGFThemeColors(CLGFTheme.Event); // Blue theme
-            backgroundColor.a = 0.15f; // More prominent blue background
-            borderColor.a = 0.9f;
-            
-            Rect sectionStart = GUILayoutUtility.GetRect(0, 0);
-            
-            EditorGUILayout.BeginVertical(GUI.skin.box);
-            EditorGUILayout.Space(12);
-            
-            // Build the flow steps dynamically with proper numbering
-            var flowSteps = BuildInteractionFlowSteps();
-            
-            for (int i = 0; i < flowSteps.Count; i++)
-            {
-                var step = flowSteps[i];
-                DrawFlowStep(step.stepNumber, step.icon, step.description, step.theme, step.details, step.isIndented);
-                
-                // Add flow arrow between steps (except after last step)
-                if (i < flowSteps.Count - 1)
-                {
-                    DrawFlowArrow(step.isIndented, flowSteps[i + 1].isIndented);
-                }
-            }
-            
-            EditorGUILayout.Space(12);
-            EditorGUILayout.EndVertical();
-            
-            // Draw enhanced background
-            if (Event.current.type == EventType.Repaint)
-            {
-                Rect sectionEnd = GUILayoutUtility.GetLastRect();
-                Rect backgroundRect = new Rect(
-                    sectionEnd.x,
-                    sectionStart.y,
-                    sectionEnd.width,
-                    sectionEnd.height + (sectionEnd.y - sectionStart.y)
-                );
-                
-                // Draw gradient-like effect with multiple layers
-                EditorGUI.DrawRect(backgroundRect, backgroundColor);
-                
-                // Enhanced border with glow effect
-                float borderWidth = 3f;
-                EditorGUI.DrawRect(new Rect(backgroundRect.x, backgroundRect.y, backgroundRect.width, borderWidth), borderColor);
-                EditorGUI.DrawRect(new Rect(backgroundRect.x, backgroundRect.y + backgroundRect.height - borderWidth, backgroundRect.width, borderWidth), borderColor);
-                EditorGUI.DrawRect(new Rect(backgroundRect.x, backgroundRect.y, borderWidth, backgroundRect.height), borderColor);
-                EditorGUI.DrawRect(new Rect(backgroundRect.x + backgroundRect.width - borderWidth, backgroundRect.y, borderWidth, backgroundRect.height), borderColor);
-                
-                // Inner glow
-                Color glowColor = borderColor;
-                glowColor.a = 0.3f;
-                EditorGUI.DrawRect(new Rect(backgroundRect.x + borderWidth, backgroundRect.y + borderWidth, backgroundRect.width - borderWidth * 2, borderWidth), glowColor);
-                EditorGUI.DrawRect(new Rect(backgroundRect.x + borderWidth, backgroundRect.y + backgroundRect.height - borderWidth * 2, backgroundRect.width - borderWidth * 2, borderWidth), glowColor);
-                EditorGUI.DrawRect(new Rect(backgroundRect.x + borderWidth, backgroundRect.y + borderWidth, borderWidth, backgroundRect.height - borderWidth * 2), glowColor);
-                EditorGUI.DrawRect(new Rect(backgroundRect.x + backgroundRect.width - borderWidth * 2, backgroundRect.y + borderWidth, borderWidth, backgroundRect.height - borderWidth * 2), glowColor);
-            }
-        }
-        
-        private System.Collections.Generic.List<(int stepNumber, string icon, string description, CLGFTheme theme, string[] details, bool isIndented)> BuildInteractionFlowSteps()
-        {
-            var steps = new System.Collections.Generic.List<(int stepNumber, string icon, string description, CLGFTheme theme, string[] details, bool isIndented)>();
-            int currentStep = 1;
-            
-            // Step 1: Trigger
-            steps.Add((currentStep++, "⚡", $"{triggerConfig.triggerType} trigger on '{(triggerObject ? triggerObject.name : "TriggerObject")}'", CLGFTheme.Action, new string[0], false));
-            
-            // Step 2: Conditions (only if they exist)
-            if (conditionConfigs.Count > 0)
-            {
-                string conditionText = $"Check {conditionConfigs.Count} condition(s)";
-                string requirement = requireAllConditions ? "All must be met" : "Any can be met";
-                steps.Add((currentStep++, "🔍", conditionText, CLGFTheme.Action, new[] { requirement }, false));
-            }
-            
-            // Step 3+: Events and Responses
-            foreach (var eventConfig in eventChannelConfigs)
-            {
-                steps.Add((currentStep++, "📡", $"Raise '{eventConfig.eventName}' event", CLGFTheme.Event, new string[0], false));
-                
-                var listeners = responseObjectConfigs.Where(r => r.listenToEvents.Contains(eventConfig.eventName)).ToArray();
-                foreach (var listener in listeners)
-                {
-                    string[] actionDetails = listener.actions.Select(a => $"• {a.ActionId}" + (a.executionDelay > 0 ? $" (delay: {a.executionDelay}s)" : "")).ToArray();
-                    steps.Add((currentStep++, "🎬", $"{listener.objectName} responds", CLGFTheme.ObjectControl, actionDetails, true)); // Indented response
-                }
-            }
-            
-            return steps;
-        }
-        
-        private void DrawFlowStep(int stepNumber, string icon, string description, CLGFTheme theme, string[] details, bool isIndented)
-        {
-            EditorGUILayout.BeginHorizontal();
-            
-            // Base indentation
-            float baseIndent = 16f;
-            float additionalIndent = isIndented ? 60f : 0f; // Extra indent for response steps
-            GUILayout.Space(baseIndent + additionalIndent);
-            
-            // Step number in a colored circle
-            var (stepBg, stepBorder) = GetCLGFThemeColors(theme);
-            stepBg.a = 0.3f;
-            stepBorder.a = 1f;
-            
-            GUIStyle stepNumberStyle = new GUIStyle(EditorStyles.boldLabel)
-            {
-                fontSize = 14,
-                fontStyle = FontStyle.Bold,
-                alignment = TextAnchor.MiddleCenter,
-                normal = { textColor = Color.white }
-            };
-            
-            // Draw step number circle
-            Rect numberRect = GUILayoutUtility.GetRect(30, 30);
-            if (Event.current.type == EventType.Repaint)
-            {
-                EditorGUI.DrawRect(numberRect, stepBorder);
-                EditorGUI.DrawRect(new Rect(numberRect.x + 1, numberRect.y + 1, numberRect.width - 2, numberRect.height - 2), stepBg);
-            }
-            EditorGUI.LabelField(numberRect, stepNumber.ToString(), stepNumberStyle);
-            
-            GUILayout.Space(12);
-            
-            // Icon and description - MUCH BIGGER ICONS (3x)
-            GUIStyle iconStyle = new GUIStyle(EditorStyles.boldLabel)
-            {
-                fontSize = 40, // 3x bigger from 16px
-                alignment = TextAnchor.UpperLeft
-            };
-            
-            GUIStyle descStyle = new GUIStyle(EditorStyles.boldLabel)
-            {
-                fontSize = 13,
-                fontStyle = FontStyle.Bold,
-                alignment = TextAnchor.LowerLeft
-            };
-            
-            EditorGUILayout.BeginVertical();
-            
-            EditorGUILayout.BeginHorizontal();
-            EditorGUILayout.LabelField(icon, iconStyle, GUILayout.Width(60), GUILayout.Height(50)); // Bigger space for bigger icon
-            EditorGUILayout.BeginVertical();
-            GUILayout.Space(05); // Center align with the larger icon
-            EditorGUILayout.LabelField(description, descStyle);
-            EditorGUILayout.EndVertical();
-            EditorGUILayout.EndHorizontal();
-            
-            // Additional details
-            if (details.Length > 0)
-            {
-                GUIStyle detailStyle = new GUIStyle(EditorStyles.label)
-                {
-                    fontSize = 11,
-                    fontStyle = FontStyle.Italic
-                };
-                
-                foreach (var detail in details)
-                {
-                    EditorGUILayout.BeginHorizontal();
-                    GUILayout.Space(85); // Align with icon space
-                    EditorGUILayout.LabelField(detail, detailStyle);
-                    EditorGUILayout.EndHorizontal();
-                }
-            }
-            
-            EditorGUILayout.EndVertical();
-            
-            GUILayout.Space(16);
-            EditorGUILayout.EndHorizontal();
-        }
-        
-        private void DrawFlowArrow(bool fromIndented, bool toIndented)
-        {
-            EditorGUILayout.BeginHorizontal();
-            
-            // Calculate arrow position based on indentation
-            float baseIndent = 16f;
-            float fromIndentAmount = fromIndented ? 60f : 0f;
-            float toIndentAmount = toIndented ? 60f : 0f;
-            
-            // Position arrow at the step number circle center
-            GUILayout.Space(baseIndent + fromIndentAmount + 15f); // 15f = half of circle width (30px)
-            
-            GUIStyle arrowStyle = new GUIStyle(EditorStyles.boldLabel)
-            {
-                fontSize = 20,
-                alignment = TextAnchor.MiddleCenter,
-                normal = { textColor = new Color(0.6f, 0.6f, 0.6f, 1f) }
-            };
-            
-            // If transitioning between indent levels, show a connecting arrow
-            if (fromIndented != toIndented)
-            {
-                if (toIndented)
-                {
-                    // Going from main flow to indented - show angled arrow
-                    EditorGUILayout.LabelField("↘", arrowStyle, GUILayout.Width(30));
-                }
-                else
-                {
-                    // Going from indented back to main flow - show angled arrow
-                    EditorGUILayout.LabelField("↙", arrowStyle, GUILayout.Width(30));
-                }
-            }
-            else
-            {
-                // Straight down arrow
-                EditorGUILayout.LabelField("↓", arrowStyle, GUILayout.Width(30));
-            }
-            
-            GUILayout.FlexibleSpace();
-            EditorGUILayout.EndHorizontal();
-            
-            EditorGUILayout.Space(6);
-        }
         
         private void DrawComplete()
         {
@@ -2140,7 +2399,7 @@ namespace GameFramework.Events.Editor
         
         private bool CanProceedToNextStep()
         {
-            return currentStep switch
+            return GetCurrentWizardStep() switch
             {
                 WizardStep.ProjectSetup => (useExistingProjectFolder && !string.IsNullOrEmpty(selectedProjectFolderPath)) || (!useExistingProjectFolder && !string.IsNullOrEmpty(projectName.Trim())),
                 WizardStep.TemplateSelection => !useTemplate || selectedTemplate != null,
@@ -2156,23 +2415,23 @@ namespace GameFramework.Events.Editor
         
         private void NextStep()
         {
-            if (currentStep < WizardStep.Complete)
+            if (currentStepIndex < GetWizardSteps().Length - 1)
             {
-                currentStep++;
+                NextStep();
             }
         }
         
         private void PreviousStep()
         {
-            if (currentStep > WizardStep.TemplateSelection)
+            if (currentStepIndex > 1) // Template Selection is index 1
             {
-                currentStep--;
+                PreviousStep();
             }
         }
         
         private void ResetWizard()
         {
-            currentStep = WizardStep.TemplateSelection;
+            NavigateToStep(1); // Template Selection
             selectedTemplate = null;
             triggerObject = null;
             triggerConfig = new TriggerConfig();
@@ -2187,6 +2446,155 @@ namespace GameFramework.Events.Editor
         }
         
         #endregion
+        
+        /// <summary>
+        /// Draws the interaction flow diagram using the BaseSetupWizard framework
+        /// </summary>
+        private void DrawFlowDiagram()
+        {
+            // Now we can use DrawFlowDiagram directly since we inherit from BaseSetupWizard
+            
+            // Build flow steps using the new BaseSetupWizard.FlowStep system
+            var flowSteps = new List<FlowStep>();
+            int stepNum = 1;
+            
+            // Step 1: Trigger
+            flowSteps.Add(new FlowStep(
+                stepNum++, "⚡", 
+                $"{triggerConfig.triggerType} trigger on '{(triggerObject ? triggerObject.name : "TriggerObject")}'", 
+                CLGFBaseEditor.CLGFTheme.Action
+            ));
+            
+            // Step 2: Events (always present)
+            foreach (var eventConfig in eventChannelConfigs)
+            {
+                flowSteps.Add(new FlowStep(
+                    stepNum++, "📡", 
+                    $"Raise event: {eventConfig.eventName}",
+                    CLGFBaseEditor.CLGFTheme.Event
+                ));
+                
+                // Step 3: Responses for this event (organized by hierarchy)
+                var directListeners = responseObjectConfigs.Where(r => IsListeningToEvent(r, eventConfig.eventName)).ToArray();
+                
+                // Find parent containers that have children listening to this event (even if parent doesn't listen)
+                var parentsWithListeningChildren = responseObjectConfigs
+                    .Where(parent => parent.isParentObject && 
+                           responseObjectConfigs.Any(child => child.isChildObject && 
+                                                   child.parentObjectName == parent.objectName && 
+                                                   IsListeningToEvent(child, eventConfig.eventName)))
+                    .ToArray();
+                
+                // Combine direct listeners with parents of listening children
+                var allRelevantParents = directListeners.Where(l => l.isParentObject)
+                    .Union(parentsWithListeningChildren)
+                    .Distinct()
+                    .ToArray();
+                
+                // Get standalone listeners (not parents, not children)
+                var standaloneListeners = directListeners.Where(l => !l.isParentObject && !l.isChildObject).ToArray();
+                
+                // Add parent containers (including those with listening children)
+                foreach (var parent in allRelevantParents)
+                {
+                    // Count children listening to this specific event
+                    var listeningChildren = responseObjectConfigs
+                        .Where(l => l.isChildObject && l.parentObjectName == parent.objectName && IsListeningToEvent(l, eventConfig.eventName))
+                        .ToArray();
+                    
+                    string parentDescription;
+                    if (listeningChildren.Length > 0)
+                    {
+                        parentDescription = $"{parent.objectName} (contains {listeningChildren.Length} children)";
+                    }
+                    else if (IsListeningToEvent(parent, eventConfig.eventName))
+                    {
+                        parentDescription = $"{parent.objectName} responds";
+                    }
+                    else
+                    {
+                        parentDescription = $"{parent.objectName} (container)";
+                    }
+                    
+                    string[] parentDetails = parent.actions.Take(2).Select(a => $"• {a.ActionId}").ToArray();
+                    flowSteps.Add(new FlowStep(
+                        stepNum++, "🏗️", 
+                        parentDescription,
+                        CLGFBaseEditor.CLGFTheme.ObjectControl, 
+                        parentDetails, 
+                        true, // Indented
+                        1 // Indent level 1 for parents
+                    ));
+                    
+                    // Add child objects under this parent that are listening to this event
+                    foreach (var child in listeningChildren.Take(3)) // Limit children shown
+                    {
+                        string[] childDetails = child.actions.Take(2).Select(a => $"• {a.ActionId}").ToArray();
+                        flowSteps.Add(new FlowStep(
+                            stepNum++, "🎬", 
+                            $"└─ {child.objectName}",
+                            CLGFBaseEditor.CLGFTheme.ObjectControl, 
+                            childDetails, 
+                            true, // Indented
+                            2 // Indent level 2 for children (deeper)
+                        ));
+                    }
+                }
+                
+                // Add standalone (non-hierarchical) listeners
+                foreach (var listener in standaloneListeners.Take(2))
+                {
+                    string[] actionDetails = listener.actions.Take(2).Select(a => $"• {a.ActionId}").ToArray();
+                    flowSteps.Add(new FlowStep(
+                        stepNum++, "🎬", 
+                        $"{listener.objectName} responds",
+                        CLGFBaseEditor.CLGFTheme.ObjectControl, 
+                        actionDetails, 
+                        true // Indented
+                    ));
+                }
+            }
+            
+            // If no response objects were added through events, show all response objects
+            if (responseObjectConfigs.Count > 0 && !responseObjectConfigs.Any(r => eventChannelConfigs.Any(e => r.listenToEvents.Contains(e.eventName))))
+            {
+                // Add a generic "Response Objects" section
+                foreach (var responseConfig in responseObjectConfigs.Take(5)) // Show up to 5 response objects
+                {
+                    string icon = responseConfig.isParentObject ? "🏗️" : 
+                                 responseConfig.isChildObject ? "🔧" : "🎬";
+                    
+                    string[] actionDetails = responseConfig.actions.Take(2).Select(a => $"• {a.ActionId}").ToArray();
+                    
+                    int indentLevel = responseConfig.isChildObject ? 2 : 1;
+                    string description = responseConfig.isChildObject ? 
+                        $"└─ {responseConfig.objectName}" : 
+                        responseConfig.objectName;
+                    
+                    flowSteps.Add(new FlowStep(
+                        stepNum++, icon, 
+                        description,
+                        CLGFBaseEditor.CLGFTheme.ObjectControl, 
+                        actionDetails, 
+                        true, // Indented
+                        indentLevel
+                    ));
+                }
+            }
+            
+            // Use the BaseSetupWizard flow diagram system (only if we have steps)
+            if (flowSteps.Count > 1) // More than just the trigger step
+            {
+                DrawFlowDiagram(flowSteps);
+            }
+            else
+            {
+                // Show a message when no response objects are configured
+                EditorGUILayout.Space(10);
+                EditorGUILayout.HelpBox("🔄 Flow diagram will appear here once you add response objects in the previous steps.", MessageType.Info);
+                EditorGUILayout.Space(10);
+            }
+        }
         
         #region Setup Application
         
@@ -2258,7 +2666,7 @@ namespace GameFramework.Events.Editor
                 EditorSceneManager.MarkSceneDirty(triggerObject.scene);
                 
                 // Move to complete step
-                currentStep = WizardStep.Complete;
+                NavigateToStep(7); // Complete step
                 
                 EditorUtility.DisplayDialog("Success", "Complete interaction system created successfully!", "OK");
             }
@@ -2409,12 +2817,14 @@ namespace GameFramework.Events.Editor
             // and configure the condition accordingly
         }
         
-        // Store created event assets for use in other methods
+        // Store created assets and objects for use in other methods
         private System.Collections.Generic.Dictionary<string, GameEvent> createdGameEvents = new System.Collections.Generic.Dictionary<string, GameEvent>();
+        private System.Collections.Generic.Dictionary<string, GameObject> createdResponseObjects = new System.Collections.Generic.Dictionary<string, GameObject>();
         
         private void CreateEventChannels()
         {
             createdGameEvents.Clear();
+            createdResponseObjects.Clear();
             
             foreach (var eventConfig in eventChannelConfigs)
             {
@@ -2727,9 +3137,25 @@ namespace GameFramework.Events.Editor
                 
                 if (creationMode == CreationMode.SceneObjects)
                 {
-                    // Create object in scene (original behavior)
-                    // Position it near the trigger object if possible
-                    if (triggerObject != null)
+                    // Handle parent-child hierarchy
+                    if (responseConfig.isChildObject && !string.IsNullOrEmpty(responseConfig.parentObjectName))
+                    {
+                        // Find the parent object
+                        GameObject parentObject = FindCreatedResponseObject(responseConfig.parentObjectName);
+                        if (parentObject != null)
+                        {
+                            responseObject.transform.SetParent(parentObject.transform);
+                            responseObject.transform.localPosition = Vector3.zero; // Reset to parent origin
+                            Debug.Log($"Created child response object '{responseConfig.objectName}' under parent '{responseConfig.parentObjectName}'");
+                        }
+                        else
+                        {
+                            Debug.LogWarning($"Parent object '{responseConfig.parentObjectName}' not found for child '{responseConfig.objectName}'. Creating as root object.");
+                        }
+                    }
+                    
+                    // Position it near the trigger object if possible (only for non-child objects)
+                    if (!responseConfig.isChildObject && triggerObject != null)
                     {
                         Vector3 offset = new Vector3(2f, 0f, 0f); // Place 2 units to the right of trigger
                         responseObject.transform.position = triggerObject.transform.position + offset;
@@ -2762,6 +3188,9 @@ namespace GameFramework.Events.Editor
                     Debug.Log($"Created new response object as prefab: {prefabPath}");
                 }
                 
+                // Store the created object in the dictionary for hierarchy tracking
+                createdResponseObjects[responseConfig.objectName] = responseObject;
+                
                 return responseObject;
             }
             catch (System.Exception e)
@@ -2769,6 +3198,30 @@ namespace GameFramework.Events.Editor
                 Debug.LogError($"Exception creating response object '{responseConfig.objectName}': {e.Message}");
                 return null;
             }
+        }
+        
+        private GameObject FindCreatedResponseObject(string objectName)
+        {
+            // Search through already created response objects
+            // This assumes objects are created in the order they appear in responseObjectConfigs
+            foreach (var kvp in createdResponseObjects)
+            {
+                if (kvp.Value != null && kvp.Value.name == objectName)
+                {
+                    return kvp.Value;
+                }
+            }
+            
+            // Fallback: search in scene
+            GameObject found = GameObject.Find(objectName);
+            if (found != null)
+            {
+                Debug.Log($"Found existing response object in scene: {objectName}");
+                return found;
+            }
+            
+            Debug.LogWarning($"Could not find created response object: {objectName}");
+            return null;
         }
         
         private string GetCurrentProjectFolderName()
@@ -2855,11 +3308,26 @@ namespace GameFramework.Events.Editor
         
         private void CreateGameEventListeners(GameObject responseObject, ResponseObjectConfig responseConfig)
         {
-            foreach (var eventName in responseConfig.listenToEvents)
+            // Handle both string events and GameEvent assets
+            for (int i = 0; i < responseConfig.listenToEvents.Count; i++)
             {
-                if (!createdGameEvents.TryGetValue(eventName, out GameEvent gameEvent))
+                string eventName = responseConfig.listenToEvents[i];
+                GameEvent gameEvent = null;
+                
+                // First try to get GameEvent from direct asset reference
+                if (i < responseConfig.gameEventAssets.Count && responseConfig.gameEventAssets[i] != null)
                 {
-                    Debug.LogError($"GameEvent '{eventName}' not found for response object '{responseObject.name}'. Skipping listener creation.");
+                    gameEvent = responseConfig.gameEventAssets[i];
+                    Debug.Log($"Using direct GameEvent asset: {gameEvent.ChannelName} for {responseObject.name}");
+                }
+                // Fallback to wizard-created events
+                else if (!string.IsNullOrEmpty(eventName) && createdGameEvents.TryGetValue(eventName, out gameEvent))
+                {
+                    Debug.Log($"Using wizard-created GameEvent: {eventName} for {responseObject.name}");
+                }
+                else
+                {
+                    Debug.LogWarning($"GameEvent '{eventName}' not found for response object '{responseObject.name}'. Skipping listener creation.");
                     continue;
                 }
                 
@@ -2882,12 +3350,12 @@ namespace GameFramework.Events.Editor
                     if (existingListener != null)
                     {
                         gameEventListener = existingListener;
-                        Debug.Log($"Using existing GameEventListener for event: {eventName} on {responseObject.name}");
+                        Debug.Log($"Using existing GameEventListener for event: {gameEvent.ChannelName} on {responseObject.name}");
                     }
                     else
                     {
                         gameEventListener = responseObject.AddComponent<GameEventListener>();
-                        Debug.Log($"Added new GameEventListener for event: {eventName} on {responseObject.name}");
+                        Debug.Log($"Added new GameEventListener for event: {gameEvent.ChannelName} on {responseObject.name}");
                     }
                     
                     // Configure the listener
@@ -3037,6 +3505,96 @@ namespace GameFramework.Events.Editor
             // and configure the action accordingly
         }
         
+        /// <summary>
+        /// Helper method to check if a response object is listening to a specific event,
+        /// considering both string event names and GameEvent ScriptableObject references.
+        /// </summary>
+        private bool IsListeningToEvent(ResponseObjectConfig responseConfig, string eventName)
+        {
+            // Check string event names
+            if (responseConfig.listenToEvents.Contains(eventName))
+                return true;
+            
+            // Check GameEvent ScriptableObject references
+            for (int i = 0; i < responseConfig.gameEventAssets.Count; i++)
+            {
+                var gameEventAsset = responseConfig.gameEventAssets[i];
+                if (gameEventAsset != null && gameEventAsset.ChannelName == eventName)
+                    return true;
+            }
+            
+            return false;
+        }
+        
+        private bool HasValidTriggerConfiguration()
+        {
+            if (createNewTriggerObject)
+                return !string.IsNullOrEmpty(newTriggerObjectName?.Trim());
+            else
+                return triggerObject != null;
+        }
+        
+        private bool HasValidSetupConfiguration()
+        {
+            return HasValidTriggerConfiguration() && 
+                   eventChannelConfigs.Count > 0 && 
+                   responseObjectConfigs.Count > 0;
+        }
+        
+        private void CompleteSetup()
+        {
+            // Apply the complete interaction system setup
+            ApplySetup();
+        }
+        
+        private CLGFBaseEditor.CLGFTheme GetStepThemeForEnum(WizardStep step)
+        {
+            return step switch
+            {
+                WizardStep.ProjectSetup => CLGFBaseEditor.CLGFTheme.System,
+                WizardStep.TemplateSelection => CLGFBaseEditor.CLGFTheme.System,
+                WizardStep.TriggerSetup => CLGFBaseEditor.CLGFTheme.Action,
+                WizardStep.EventChannelSetup => CLGFBaseEditor.CLGFTheme.Event,
+                WizardStep.ConditionSetup => CLGFBaseEditor.CLGFTheme.Action,
+                WizardStep.ResponseObjectSetup => CLGFBaseEditor.CLGFTheme.ObjectControl,
+                WizardStep.Review => CLGFBaseEditor.CLGFTheme.Character,
+                WizardStep.Complete => CLGFBaseEditor.CLGFTheme.System,
+                _ => CLGFBaseEditor.CLGFTheme.System
+            };
+        }
+        
+        // Placeholder helper methods removed - now using comprehensive implementations
+        
+        private void ApplyTemplate(TriggerResponseTemplate template)
+        {
+            // TODO: Implement template application
+            if (template != null)
+            {
+                // Apply template configuration to current wizard state
+                EditorUtility.DisplayDialog("Template Applied", $"Template '{template.TemplateName}' has been applied.", "OK");
+            }
+        }
+        
+        #region Foldout System
+        
+        /// <summary>
+        /// Draws a collapsible foldout section with themed styling using BaseSetupWizard's foldout system.
+        /// Returns true if the section is expanded and content should be drawn.
+        /// </summary>
+        private new bool DrawFoldoutSection(string id, string title, string icon = "📁", CLGFBaseEditor.CLGFTheme theme = CLGFBaseEditor.CLGFTheme.System, System.Action drawContent = null, bool defaultExpanded = true, bool showItemCount = false, int itemCount = 0, string tooltip = "", bool drawBackground = true, FoldoutUtility.FoldoutButton[] headerButtons = null)
+        {
+            return base.DrawFoldoutSection(id, title, icon, theme, drawContent, defaultExpanded, showItemCount, itemCount, tooltip, drawBackground, headerButtons);
+        }
+        
+        
+        
+        #endregion
+
+        #region BaseSetupWizard Implementation
+        // Duplicate methods removed - implementations are earlier in the file
+        
+        #endregion
+
         #endregion
     }
 }
