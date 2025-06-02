@@ -76,11 +76,15 @@ namespace GameFramework.Events.Editor
         private bool debugMode = false;
         
         // Project setup configuration
-        private string projectName = "NewInteractionProject";
+        private string projectName = "MyNewInteraction";
         private CreationMode creationMode = CreationMode.SceneObjects;
         private bool useExistingProjectFolder = false;
         private string selectedProjectFolderPath = "";
         private string[] existingProjectFolders = new string[0];
+        
+        // Shared parent configuration
+        private bool useSharedParent = false;
+        private GameObject sharedParentObject;
         
         // UI state
         private string searchFilter = "";
@@ -95,9 +99,9 @@ namespace GameFramework.Events.Editor
         {
             return new WizardStepInfo[]
             {
-                new WizardStepInfo("ProjectSetup", "Project Setup", "Configure the project and creation mode for your interaction system.", "🏗️", CLGFBaseEditor.CLGFTheme.System),
+                new WizardStepInfo("InteractionSetup", "Interaction Setup", "Configure the interaction and creation mode for your interaction system.", "🏗️", CLGFBaseEditor.CLGFTheme.System),
                 new WizardStepInfo("TemplateSelection", "Template Selection", "Choose a template or start from scratch to create complete multi-object interactions.", "📋", CLGFBaseEditor.CLGFTheme.System),
-                new WizardStepInfo("TriggerSetup", "Trigger Setup", "Configure the triggering object that will start the interaction.", "⚡", CLGFBaseEditor.CLGFTheme.Action),
+                new WizardStepInfo("TriggerSetup", "Trigger Setup", "Configure the triggering object that will start the interaction.", "⚡", CLGFBaseEditor.CLGFTheme.Collision),
                 new WizardStepInfo("EventChannelSetup", "Event Channels", "Set up event channels that connect triggers to responses.", "📡", CLGFBaseEditor.CLGFTheme.Event),
                 new WizardStepInfo("ConditionSetup", "Conditions", "Add optional conditions that must be met for the interaction to occur.", "🔍", CLGFBaseEditor.CLGFTheme.Action),
                 new WizardStepInfo("ResponseObjectSetup", "Response Objects", "Configure multiple objects that will respond to the interaction events.", "🎬", CLGFBaseEditor.CLGFTheme.ObjectControl),
@@ -110,8 +114,8 @@ namespace GameFramework.Events.Editor
         {
             switch (step.Id)
             {
-                case "ProjectSetup":
-                    DrawProjectSetupStep();
+                case "InteractionSetup":
+                    DrawInteractionSetupStep();
                     break;
                 case "TemplateSelection":
                     DrawTemplateSelectionStep();
@@ -219,9 +223,9 @@ namespace GameFramework.Events.Editor
         #endregion
         
         #region Legacy Methods (Updated to use BaseSetupWizard)
-        private void DrawProjectSetupStep()
+        private void DrawInteractionSetupStep()
         {
-            DrawProjectSetup();
+            DrawInteractionSetup();
         }
         private void DrawTemplateSelectionStep()
         {
@@ -380,9 +384,9 @@ namespace GameFramework.Events.Editor
             // Map each step to vibrant CLGF theme colors using centralized color system
             var stepThemes = new CLGFBaseEditor.CLGFTheme[]
             {
-                CLGFBaseEditor.CLGFTheme.UI,            // Project Setup
+                CLGFBaseEditor.CLGFTheme.UI,            // Interaction setup
                 CLGFBaseEditor.CLGFTheme.System,        // Template
-                CLGFBaseEditor.CLGFTheme.Action,        // Trigger  
+                CLGFBaseEditor.CLGFTheme.Collision,     // Trigger  
                 CLGFBaseEditor.CLGFTheme.Event,         // Events
                 CLGFBaseEditor.CLGFTheme.Action,        // Conditions
                 CLGFBaseEditor.CLGFTheme.ObjectControl, // Responses
@@ -488,18 +492,8 @@ namespace GameFramework.Events.Editor
         
         #region Step Implementation
         
-        private void DrawProjectSetup()
+        private void DrawInteractionSetup()
         {
-            GUIStyle titleStyle = new GUIStyle(EditorStyles.boldLabel)
-            {
-                fontSize = 16
-            };
-            EditorGUILayout.LabelField("🎯 Project Setup", titleStyle);
-            
-            EditorGUILayout.Space(10); // Extra buffer
-            
-            DrawThemedHelpBox("Configure your project settings to organize assets and choose how objects are created.");
-            
             // Creation Mode Selection
             EditorGUILayout.LabelField("Creation Mode", EditorStyles.boldLabel);
             EditorGUILayout.Space(3);
@@ -609,18 +603,53 @@ namespace GameFramework.Events.Editor
                     EditorGUILayout.HelpBox("No existing project folders found. Switch to 'Create New' to create your first project.", MessageType.Warning);
                 }
             }
+            
+            EditorGUILayout.Space(15);
+            
+            // Shared Parent Configuration
+            EditorGUILayout.LabelField("Object Organization", EditorStyles.boldLabel);
+            EditorGUILayout.Space(3);
+            
+            // Use a layout that prevents text clipping
+            EditorGUILayout.BeginHorizontal();
+            useSharedParent = EditorGUILayout.Toggle(useSharedParent, GUILayout.Width(15));
+            GUILayout.Space(5);
+            
+            GUIContent sharedParentLabel = new GUIContent("🏠 Use Shared Parent Container", 
+                "Create a single parent GameObject/Prefab that contains all trigger and response objects. Perfect for self-contained interactions like coin pickups, doors, etc.");
+            
+            if (GUILayout.Button(sharedParentLabel, EditorStyles.label, GUILayout.ExpandWidth(true)))
+            {
+                useSharedParent = !useSharedParent; // Allow clicking label to toggle
+            }
+            EditorGUILayout.EndHorizontal();
+            
+            if (useSharedParent)
+            {
+                EditorGUILayout.Space(5);
+                EditorGUI.indentLevel++;
+                
+                string containerType = creationMode == CreationMode.Prefabs ? "prefab" : "GameObject";
+                EditorGUILayout.LabelField($"🏠 Creating shared parent {containerType}", EditorStyles.miniLabel);
+                
+                string parentName = !useExistingProjectFolder ? projectName : selectedProjectFolderPath;
+                if (string.IsNullOrEmpty(parentName))
+                    parentName = "NewInteraction";
+                    
+                EditorGUILayout.HelpBox($"A parent {containerType} named '{parentName}' will be created to contain all trigger and response objects. This keeps the interaction organized as a single unit.", MessageType.Info);
+                
+                EditorGUI.indentLevel--;
+            }
+            else
+            {
+                EditorGUILayout.Space(5);
+                EditorGUILayout.LabelField("🌐 Creating separate objects", EditorStyles.miniLabel);
+                EditorGUILayout.HelpBox("Trigger and response objects will be created as separate GameObjects/Prefabs. Use this for interactions spanning multiple independent objects.", MessageType.Info);
+            }
         }
         
         private void DrawTemplateSelection()
         {
-            GUIStyle titleStyle = new GUIStyle(EditorStyles.boldLabel)
-            {
-                fontSize = 16
-            };
-            EditorGUILayout.LabelField("📋 Template Selection", titleStyle);
-
-            EditorGUILayout.Space(10); // Extra buffer
-
             // Template mode toggle
             EditorGUILayout.BeginHorizontal();
             bool newUseTemplate = EditorGUILayout.Toggle("Use Template", useTemplate);
@@ -651,6 +680,25 @@ namespace GameFramework.Events.Editor
                 EditorGUILayout.HelpBox("No templates found. Create some TriggerResponseTemplate assets to get started.", MessageType.Warning);
                 return;
             }
+            
+            // Template management buttons
+            EditorGUILayout.BeginHorizontal();
+            GUILayout.FlexibleSpace();
+            
+            if (GUILayout.Button("🔄 Update All Templates", GUILayout.Width(150)))
+            {
+                if (EditorUtility.DisplayDialog("Update Templates", 
+                    "This will update all existing templates to use the new features:\n" +
+                    "• Set 'Prefer Create New' to true for all objects\n" +
+                    "• Enable 'Use Shared Parent' for appropriate templates (pickups, doors, buttons)\n\n" +
+                    "This action cannot be undone. Continue?", "Update", "Cancel"))
+                {
+                    UpdateAllTemplatesToNewFeatures();
+                }
+            }
+            
+            EditorGUILayout.EndHorizontal();
+            EditorGUILayout.Space(5);
             
             // Search and filter
             EditorGUILayout.Space(5);
@@ -752,18 +800,11 @@ namespace GameFramework.Events.Editor
         
         private void DrawTriggerSetup()
         {
-            GUIStyle titleStyle = new GUIStyle(EditorStyles.boldLabel)
-            {
-                fontSize = 16
-            };
-            EditorGUILayout.LabelField("⚡ Trigger Configuration", titleStyle);
-            
-            EditorGUILayout.Space(5);
             DrawFoldoutControls();
             EditorGUILayout.Space(5);
 
             // Basic trigger setup foldout
-            DrawFoldoutSection("trigger_basic", "Basic Trigger Setup", "⚡", CLGFBaseEditor.CLGFTheme.Action, () =>
+            DrawFoldoutSection("trigger_basic", "Basic Trigger Setup", "⚡", CLGFBaseEditor.CLGFTheme.Collision, () =>
             {
                 // Trigger mode selection - matching events/responses visual pattern
                 EditorGUILayout.BeginHorizontal();
@@ -837,7 +878,7 @@ namespace GameFramework.Events.Editor
                 _ => "⚙️"
             };
             
-            DrawFoldoutSection("trigger_settings", $"{triggerConfig.triggerType} Settings", triggerTypeIcon, CLGFBaseEditor.CLGFTheme.Action, () =>
+            DrawFoldoutSection("trigger_settings", $"{triggerConfig.triggerType} Settings", triggerTypeIcon, CLGFBaseEditor.CLGFTheme.Collision, () =>
             {
                 switch (triggerConfig.triggerType)
                 {
@@ -867,13 +908,6 @@ namespace GameFramework.Events.Editor
         
         private void DrawEventChannelSetup()
         {
-            GUIStyle titleStyle = new GUIStyle(EditorStyles.boldLabel)
-            {
-                fontSize = 16
-            };
-            EditorGUILayout.LabelField("📡 Event Channel Configuration", titleStyle);
-            
-            EditorGUILayout.Space(5);
             DrawFoldoutControls();
             EditorGUILayout.Space(5);
 
@@ -898,13 +932,16 @@ namespace GameFramework.Events.Editor
                         $"Event Channel {i + 1}" : 
                         $"{eventDisplayName}";
                     
+                    // Capture the config object to avoid index issues
+                    var configToRemove = eventConfig;
+                    
                     // Individual event channel foldout with header buttons
                     var individualChannelButtons = new FoldoutUtility.FoldoutButton[]
                     {
                         new FoldoutUtility.FoldoutButton("✕", () => {
                             // Store action to execute after the loop to avoid modifying collection during iteration
                             pendingActions.Add(() => {
-                                eventChannelConfigs.RemoveAt(i);
+                                eventChannelConfigs.Remove(configToRemove);
                             });
                         }, "Remove this event channel", new Color(0.8f, 0.3f, 0.3f, 0.8f), Color.white, 30f)
                     };
@@ -1030,13 +1067,6 @@ namespace GameFramework.Events.Editor
         
         private void DrawConditionSetup()
         {
-            GUIStyle titleStyle = new GUIStyle(EditorStyles.boldLabel)
-            {
-                fontSize = 16
-            };
-            EditorGUILayout.LabelField("🔍 Condition Setup (Optional)", titleStyle);
-            
-            EditorGUILayout.Space(5);
             DrawFoldoutControls();
             EditorGUILayout.Space(5);
             
@@ -1050,7 +1080,7 @@ namespace GameFramework.Events.Editor
                 }, "Add a new condition", null, null, 80f)
             };
             
-            DrawFoldoutSection("conditions", "Conditions", "🔍", CLGFBaseEditor.CLGFTheme.System, () =>
+            DrawFoldoutSection("conditions", "Conditions", "🔍", CLGFBaseEditor.CLGFTheme.Collision, () =>
             {
                 if (conditionConfigs.Count > 0)
                 {
@@ -1061,18 +1091,21 @@ namespace GameFramework.Events.Editor
                 // List existing conditions
                 for (int i = 0; i < conditionConfigs.Count; i++)
                 {
+                    // Capture the config object to avoid index issues
+                    var configToRemove = conditionConfigs[i];
+                    
                     // Individual condition foldout with header buttons
                     var individualConditionButtons = new FoldoutUtility.FoldoutButton[]
                     {
                         new FoldoutUtility.FoldoutButton("✕", () => {
                             // Store action to execute after the loop to avoid modifying collection during iteration
                             pendingActions.Add(() => {
-                                conditionConfigs.RemoveAt(i);
+                                conditionConfigs.Remove(configToRemove);
                             });
                         }, "Remove this condition", new Color(0.8f, 0.3f, 0.3f, 0.8f), Color.white, 30f)
                     };
                     
-                    DrawFoldoutSection($"condition_{i}", $"Condition {i + 1} ({conditionConfigs[i].conditionType})", "🔍", CLGFBaseEditor.CLGFTheme.System, () =>
+                    DrawFoldoutSection($"condition_{i}", $"Condition {i + 1} ({conditionConfigs[i].conditionType})", "🔍", CLGFBaseEditor.CLGFTheme.Collision, () =>
                     {
                         EditorGUILayout.Space(5);
                         
@@ -1096,13 +1129,6 @@ namespace GameFramework.Events.Editor
         
         private void DrawResponseObjectSetup()
         {
-            GUIStyle titleStyle = new GUIStyle(EditorStyles.boldLabel)
-            {
-                fontSize = 16
-            };
-            EditorGUILayout.LabelField("🎬 Response Object Configuration", titleStyle);
-            
-            EditorGUILayout.Space(5);
             DrawFoldoutControls();
             EditorGUILayout.Space(5);
 
@@ -1414,8 +1440,8 @@ namespace GameFramework.Events.Editor
                     // Apply custom colors if specified
                     if (button.BackgroundColor.HasValue || button.TextColor.HasValue)
                     {
-                        Color bgColor = button.BackgroundColor ?? GUI.skin.button.normal.background.name == "builtin skins/darkskin images/btn" 
-                            ? new Color(0.4f, 0.4f, 0.4f, 1f) : new Color(0.8f, 0.8f, 0.8f, 1f);
+                        Color bgColor = button.BackgroundColor ?? (GUI.skin.button.normal.background.name == "builtin skins/darkskin images/btn" 
+                            ? new Color(0.4f, 0.4f, 0.4f, 1f) : new Color(0.8f, 0.8f, 0.8f, 1f));
                         Color txtColor = button.TextColor ?? Color.white;
                         
                         buttonStyle.normal.background = CreateSolidColorTexture(bgColor);
@@ -1984,8 +2010,11 @@ namespace GameFramework.Events.Editor
                 // Vibrant blue - bright and appealing
                 CLGFBaseEditor.CLGFTheme.Event => (new Color(0.2f, 0.6f, 1.0f, 0.15f), new Color(0.1f, 0.5f, 0.95f, 0.8f)),
                 
-                // Vibrant orange - warm and energetic  
-                CLGFBaseEditor.CLGFTheme.Action => (new Color(1.0f, 0.6f, 0.1f, 0.15f), new Color(0.95f, 0.5f, 0.0f, 0.8f)),
+                // Vibrant green - fresh and lively (now for general actions)
+                CLGFBaseEditor.CLGFTheme.Action => (new Color(0.2f, 0.8f, 0.3f, 0.15f), new Color(0.1f, 0.7f, 0.2f, 0.8f)),
+                
+                // Vibrant orange - warm and energetic (now for collision/trigger)  
+                CLGFBaseEditor.CLGFTheme.Collision => (new Color(1.0f, 0.6f, 0.1f, 0.15f), new Color(0.95f, 0.5f, 0.0f, 0.8f)),
                 
                 // Vibrant green - fresh and lively
                 CLGFBaseEditor.CLGFTheme.ObjectControl => (new Color(0.2f, 0.8f, 0.3f, 0.15f), new Color(0.1f, 0.7f, 0.2f, 0.8f)),
@@ -2103,13 +2132,6 @@ namespace GameFramework.Events.Editor
         
         private void DrawReview()
         {
-            GUIStyle titleStyle = new GUIStyle(EditorStyles.boldLabel)
-            {
-                fontSize = 16
-            };
-            EditorGUILayout.LabelField("📝 Complete Interaction Review", titleStyle);
-            
-            EditorGUILayout.Space(10);
             
             EditorGUILayout.HelpBox("Review your complete interaction system below. Click 'Apply Setup' to create all components and event connections.", MessageType.Info);
             
@@ -2121,13 +2143,13 @@ namespace GameFramework.Events.Editor
             EditorGUILayout.Space(15);
             
             // Trigger object & configuration
-            DrawColoredReviewSection("⚡ Trigger GameObject:", CLGFBaseEditor.CLGFTheme.Action, () => {
+            DrawColoredReviewSection("⚡ Trigger GameObject:", CLGFBaseEditor.CLGFTheme.Collision, () => {
                 EditorGUILayout.LabelField(triggerObject ? triggerObject.name : "None");
             });
             
             EditorGUILayout.Space(8);
             
-            DrawColoredReviewSection("⚙️ Trigger Configuration:", CLGFBaseEditor.CLGFTheme.Action, () => {
+            DrawColoredReviewSection("⚙️ Trigger Configuration:", CLGFBaseEditor.CLGFTheme.Collision, () => {
                 EditorGUILayout.LabelField($"Type: {triggerConfig.triggerType}");
                 
                 // Show collision type for collision triggers
@@ -2203,12 +2225,6 @@ namespace GameFramework.Events.Editor
         
         private void DrawComplete()
         {
-            GUIStyle titleStyle = new GUIStyle(EditorStyles.boldLabel)
-            {
-                fontSize = 16
-            };
-            EditorGUILayout.LabelField("✅ Complete Interaction Setup Complete!", titleStyle);
-            
             EditorGUILayout.HelpBox("Your complete interaction system has been successfully created with event-driven architecture spanning multiple GameObjects.", MessageType.Info);
             
             if (triggerObject != null)
@@ -2261,6 +2277,39 @@ namespace GameFramework.Events.Editor
                 string path = AssetDatabase.GUIDToAssetPath(guids[i]);
                 availableTemplates[i] = AssetDatabase.LoadAssetAtPath<TriggerResponseTemplate>(path);
             }
+        }
+        
+        private void UpdateAllTemplatesToNewFeatures()
+        {
+            if (availableTemplates == null) return;
+            
+            foreach (var template in availableTemplates)
+            {
+                if (template != null)
+                {
+                    // Determine if template should use shared parent based on name/category
+                    bool shouldUseSharedParent = ShouldTemplateUseSharedParent(template);
+                    template.UpdateToNewFeatures(shouldUseSharedParent, true);
+                }
+            }
+            
+            AssetDatabase.SaveAssets();
+            Debug.Log($"Updated {availableTemplates.Length} templates to use new features.");
+        }
+        
+        private bool ShouldTemplateUseSharedParent(TriggerResponseTemplate template)
+        {
+            string name = template.TemplateName.ToLower();
+            string category = template.Category.ToLower();
+            
+            // Templates that benefit from shared parent container
+            return name.Contains("pickup") || 
+                   name.Contains("item") || 
+                   name.Contains("coin") || 
+                   name.Contains("door") || 
+                   name.Contains("button") ||
+                   category.Contains("items") ||
+                   category.Contains("interactive");
         }
         
         private void LoadExistingProjectFolders()
@@ -2321,6 +2370,35 @@ namespace GameFramework.Events.Editor
             canRepeat = selectedTemplate.CanRepeat;
             cooldownTime = selectedTemplate.CooldownTime;
             debugMode = selectedTemplate.DebugMode;
+            
+            // Load organization settings
+            useSharedParent = selectedTemplate.UseSharedParent;
+            
+            // Update project name and trigger GameObject name from template's gameObjectName
+            if (!string.IsNullOrEmpty(selectedTemplate.GameObjectName))
+            {
+                projectName = selectedTemplate.GameObjectName;
+                newTriggerObjectName = selectedTemplate.GameObjectName;
+                useExistingProjectFolder = false; // Switch to creating new project when using template name
+            }
+            
+            // Apply "prefer create new" setting to all objects
+            if (selectedTemplate.PreferCreateNew)
+            {
+                createNewTriggerObject = true;
+                
+                // Update all event channels to create new
+                foreach (var eventConfig in eventChannelConfigs)
+                {
+                    eventConfig.createNewEvent = true;
+                }
+                
+                // Update all response objects to create new
+                foreach (var responseConfig in responseObjectConfigs)
+                {
+                    responseConfig.createNewObject = true;
+                }
+            }
         }
         
         private string GetDifficultyString(int difficulty)
@@ -2598,12 +2676,87 @@ namespace GameFramework.Events.Editor
         
         #region Setup Application
         
+        private void CreateSharedParentContainer()
+        {
+            if (sharedParentObject != null) return; // Already created
+            
+            // Determine container name
+            string containerName = !useExistingProjectFolder ? projectName : selectedProjectFolderPath;
+            if (string.IsNullOrEmpty(containerName))
+                containerName = "NewInteraction";
+            
+            if (creationMode == CreationMode.SceneObjects)
+            {
+                // Create GameObject in scene
+                sharedParentObject = new GameObject(containerName);
+                
+                // Position at scene view center
+                var sceneView = SceneView.lastActiveSceneView;
+                if (sceneView != null)
+                {
+                    sharedParentObject.transform.position = sceneView.pivot;
+                }
+                
+                // Register undo
+                Undo.RegisterCreatedObjectUndo(sharedParentObject, "Create Shared Parent Container");
+            }
+            else
+            {
+                // Create prefab asset
+                sharedParentObject = new GameObject(containerName);
+                
+                // Create prefab path
+                string prefabPath = $"Assets/Content/{containerName}/{containerName}.prefab";
+                
+                // Ensure directory exists
+                string directory = System.IO.Path.GetDirectoryName(prefabPath);
+                if (!AssetDatabase.IsValidFolder(directory))
+                {
+                    string[] folders = directory.Split('/');
+                    string currentPath = folders[0];
+                    for (int i = 1; i < folders.Length; i++)
+                    {
+                        string newPath = currentPath + "/" + folders[i];
+                        if (!AssetDatabase.IsValidFolder(newPath))
+                        {
+                            AssetDatabase.CreateFolder(currentPath, folders[i]);
+                        }
+                        currentPath = newPath;
+                    }
+                }
+                
+                // Create prefab
+                GameObject prefab = PrefabUtility.SaveAsPrefabAsset(sharedParentObject, prefabPath);
+                
+                // Replace scene object with prefab instance
+                DestroyImmediate(sharedParentObject);
+                sharedParentObject = PrefabUtility.InstantiatePrefab(prefab) as GameObject;
+                
+                // Position at scene view center
+                var sceneView = SceneView.lastActiveSceneView;
+                if (sceneView != null)
+                {
+                    sharedParentObject.transform.position = sceneView.pivot;
+                }
+                
+                // Register undo
+                Undo.RegisterCreatedObjectUndo(sharedParentObject, "Create Shared Parent Prefab");
+            }
+        }
+        
         private void ApplySetup()
         {
+            // Create shared parent container if requested
+            if (useSharedParent)
+            {
+                CreateSharedParentContainer();
+            }
+            
             // Create new GameObject if requested
             if (createNewTriggerObject && triggerObject == null)
             {
-                triggerObject = new GameObject(newTriggerObjectName.Trim());
+                string triggerName = useSharedParent ? "Trigger" : newTriggerObjectName.Trim();
+                triggerObject = new GameObject(triggerName);
                 
                 // Place the new object at the origin or scene view center
                 var sceneView = SceneView.lastActiveSceneView;
@@ -2612,11 +2765,18 @@ namespace GameFramework.Events.Editor
                     triggerObject.transform.position = sceneView.pivot;
                 }
                 
+                // Parent to shared container if using shared parent
+                if (useSharedParent && sharedParentObject != null)
+                {
+                    triggerObject.transform.SetParent(sharedParentObject.transform);
+                    triggerObject.transform.localPosition = Vector3.zero;
+                }
+                
                 // Register undo for the new GameObject creation
                 Undo.RegisterCreatedObjectUndo(triggerObject, "Create Trigger GameObject");
                 
-                // Select the new object in the hierarchy
-                Selection.activeGameObject = triggerObject;
+                // Select the shared parent or trigger object in the hierarchy
+                Selection.activeGameObject = useSharedParent ? sharedParentObject : triggerObject;
             }
             
             if (triggerObject == null)
@@ -3137,7 +3297,7 @@ namespace GameFramework.Events.Editor
                 
                 if (creationMode == CreationMode.SceneObjects)
                 {
-                    // Handle parent-child hierarchy
+                    // Handle parent-child hierarchy first
                     if (responseConfig.isChildObject && !string.IsNullOrEmpty(responseConfig.parentObjectName))
                     {
                         // Find the parent object
@@ -3151,14 +3311,36 @@ namespace GameFramework.Events.Editor
                         else
                         {
                             Debug.LogWarning($"Parent object '{responseConfig.parentObjectName}' not found for child '{responseConfig.objectName}'. Creating as root object.");
+                            
+                            // If no specific parent but using shared parent, parent to shared container
+                            if (useSharedParent && sharedParentObject != null)
+                            {
+                                responseObject.transform.SetParent(sharedParentObject.transform);
+                            }
                         }
                     }
-                    
-                    // Position it near the trigger object if possible (only for non-child objects)
-                    if (!responseConfig.isChildObject && triggerObject != null)
+                    else if (useSharedParent && sharedParentObject != null)
                     {
-                        Vector3 offset = new Vector3(2f, 0f, 0f); // Place 2 units to the right of trigger
-                        responseObject.transform.position = triggerObject.transform.position + offset;
+                        // Parent to shared container if using shared parent (and not already a child of another response object)
+                        responseObject.transform.SetParent(sharedParentObject.transform);
+                        Debug.Log($"Created response object '{responseConfig.objectName}' under shared parent '{sharedParentObject.name}'");
+                    }
+                    
+                    // Position it appropriately based on parenting
+                    if (responseObject.transform.parent == null)
+                    {
+                        // Position near trigger object if it's a root object
+                        if (triggerObject != null)
+                        {
+                            Vector3 offset = new Vector3(2f, 0f, 0f); // Place 2 units to the right of trigger
+                            responseObject.transform.position = triggerObject.transform.position + offset;
+                        }
+                    }
+                    else if (responseObject.transform.parent == sharedParentObject?.transform)
+                    {
+                        // Position relative to shared parent
+                        Vector3 offset = new Vector3(2f, 0f, 0f); // Offset from shared parent center
+                        responseObject.transform.localPosition = offset;
                     }
                     
                     // Register undo for the creation
@@ -3553,7 +3735,7 @@ namespace GameFramework.Events.Editor
             {
                 WizardStep.ProjectSetup => CLGFBaseEditor.CLGFTheme.System,
                 WizardStep.TemplateSelection => CLGFBaseEditor.CLGFTheme.System,
-                WizardStep.TriggerSetup => CLGFBaseEditor.CLGFTheme.Action,
+                WizardStep.TriggerSetup => CLGFBaseEditor.CLGFTheme.Collision,
                 WizardStep.EventChannelSetup => CLGFBaseEditor.CLGFTheme.Event,
                 WizardStep.ConditionSetup => CLGFBaseEditor.CLGFTheme.Action,
                 WizardStep.ResponseObjectSetup => CLGFBaseEditor.CLGFTheme.ObjectControl,

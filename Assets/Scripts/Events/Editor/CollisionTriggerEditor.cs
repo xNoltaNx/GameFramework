@@ -11,7 +11,7 @@ namespace GameFramework.Events.Editor
     [CustomEditor(typeof(CollisionTrigger))]
     public class CollisionTriggerEditor : CLGFBaseEditor
     {
-        protected override CLGFTheme Theme => CLGFTheme.Action;
+        protected override CLGFTheme Theme => CLGFTheme.Collision;
         protected override string ComponentIcon => "⚡";
         protected override string ComponentName => "COLLISION TRIGGER";
         

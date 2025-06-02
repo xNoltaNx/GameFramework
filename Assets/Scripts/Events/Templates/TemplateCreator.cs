@@ -33,6 +33,7 @@ namespace GameFramework.Events.Templates
             SetTemplateField(template, "description", "Complete pickup interaction: Player touches item → ItemCollected event → UI updates, audio plays, item disappears.");
             SetTemplateField(template, "category", "Items");
             SetTemplateField(template, "difficulty", 1);
+            SetTemplateField(template, "gameObjectName", "PickupItem");
             
             // Trigger config
             var triggerConfig = new TriggerConfig
@@ -79,6 +80,10 @@ namespace GameFramework.Events.Templates
             SetTemplateField(template, "cooldownTime", 0f);
             SetTemplateField(template, "debugMode", false);
             
+            // Organization settings - Pickup items benefit from shared parent
+            SetTemplateField(template, "useSharedParent", true);
+            SetTemplateField(template, "preferCreateNew", true);
+            
             SaveTemplate(template, "PickupItem");
         }
         
@@ -91,6 +96,7 @@ namespace GameFramework.Events.Templates
             SetTemplateField(template, "description", "Detects when player enters a specific range. Useful for area triggers, ambushes, or environmental effects.");
             SetTemplateField(template, "category", "Detection");
             SetTemplateField(template, "difficulty", 2);
+            SetTemplateField(template, "gameObjectName", "ProximityDetector");
             
             // Trigger config
             var triggerConfig = new TriggerConfig
@@ -105,17 +111,35 @@ namespace GameFramework.Events.Templates
             };
             SetTemplateField(template, "triggerSettings", triggerConfig);
             
-            // Actions
-            var actions = new List<ActionConfig>
+            // Event channels
+            var eventChannels = new List<EventChannelConfig>
             {
-                new ActionConfig { ActionId = "audio-action", executionDelay = 0f }
+                new EventChannelConfig { eventName = "PlayerDetected", description = "Triggered when player enters detection range", createNewEvent = true }
             };
-            SetTemplateField(template, "actions", actions);
+            SetTemplateField(template, "eventChannels", eventChannels);
+            
+            // Response objects
+            var responseObjects = new List<ResponseObjectConfig>
+            {
+                new ResponseObjectConfig 
+                { 
+                    objectName = "DetectionFeedback", 
+                    description = "Provides audio/visual feedback for detection",
+                    createNewObject = true,
+                    listenToEvents = new List<string> { "PlayerDetected" },
+                    actions = new List<ActionConfig> { new ActionConfig { ActionId = "audio-action", executionDelay = 0f } }
+                }
+            };
+            SetTemplateField(template, "responseObjects", responseObjects);
             
             // General settings
             SetTemplateField(template, "canRepeat", true);
             SetTemplateField(template, "cooldownTime", 2f);
             SetTemplateField(template, "debugMode", true);
+            
+            // Organization settings - Proximity detectors don't need shared parent (separate objects)
+            SetTemplateField(template, "useSharedParent", false);
+            SetTemplateField(template, "preferCreateNew", true);
             
             SaveTemplate(template, "ProximityDetector");
         }
@@ -129,6 +153,7 @@ namespace GameFramework.Events.Templates
             SetTemplateField(template, "description", "Triggers events after a specified time delay. Perfect for cutscenes, delayed reactions, or timed sequences.");
             SetTemplateField(template, "category", "Timing");
             SetTemplateField(template, "difficulty", 1);
+            SetTemplateField(template, "gameObjectName", "TimedEvent");
             
             // Trigger config
             var triggerConfig = new TriggerConfig
@@ -140,18 +165,43 @@ namespace GameFramework.Events.Templates
             };
             SetTemplateField(template, "triggerSettings", triggerConfig);
             
-            // Actions
-            var actions = new List<ActionConfig>
+            // Event channels
+            var eventChannels = new List<EventChannelConfig>
             {
-                new ActionConfig { ActionId = "audio-action", executionDelay = 0f },
-                new ActionConfig { ActionId = "gameobject-activate", executionDelay = 0.5f }
+                new EventChannelConfig { eventName = "TimerExpired", description = "Triggered when timer reaches zero", createNewEvent = true }
             };
-            SetTemplateField(template, "actions", actions);
+            SetTemplateField(template, "eventChannels", eventChannels);
+            
+            // Response objects
+            var responseObjects = new List<ResponseObjectConfig>
+            {
+                new ResponseObjectConfig 
+                { 
+                    objectName = "AudioFeedback", 
+                    description = "Plays audio when timer expires",
+                    createNewObject = true,
+                    listenToEvents = new List<string> { "TimerExpired" },
+                    actions = new List<ActionConfig> { new ActionConfig { ActionId = "audio-action", executionDelay = 0f } }
+                },
+                new ResponseObjectConfig 
+                { 
+                    objectName = "TargetObject", 
+                    description = "Object to activate/deactivate after timer",
+                    createNewObject = true,
+                    listenToEvents = new List<string> { "TimerExpired" },
+                    actions = new List<ActionConfig> { new ActionConfig { ActionId = "gameobject-activate", executionDelay = 0.5f } }
+                }
+            };
+            SetTemplateField(template, "responseObjects", responseObjects);
             
             // General settings
             SetTemplateField(template, "canRepeat", false);
             SetTemplateField(template, "cooldownTime", 0f);
             SetTemplateField(template, "debugMode", false);
+            
+            // Organization settings - Timed events don't typically need shared parent
+            SetTemplateField(template, "useSharedParent", false);
+            SetTemplateField(template, "preferCreateNew", true);
             
             SaveTemplate(template, "TimedEvent");
         }
@@ -165,6 +215,7 @@ namespace GameFramework.Events.Templates
             SetTemplateField(template, "description", "Player-activated button or switch. Requires player collision and can trigger doors, elevators, or other mechanisms.");
             SetTemplateField(template, "category", "Interactive");
             SetTemplateField(template, "difficulty", 2);
+            SetTemplateField(template, "gameObjectName", "InteractiveButton");
             
             // Trigger config
             var triggerConfig = new TriggerConfig
@@ -177,18 +228,43 @@ namespace GameFramework.Events.Templates
             };
             SetTemplateField(template, "triggerSettings", triggerConfig);
             
-            // Actions
-            var actions = new List<ActionConfig>
+            // Event channels
+            var eventChannels = new List<EventChannelConfig>
             {
-                new ActionConfig { ActionId = "audio-action", executionDelay = 0f },
-                new ActionConfig { ActionId = "component-toggle", executionDelay = 0.2f }
+                new EventChannelConfig { eventName = "ButtonPressed", description = "Triggered when button is activated by player", createNewEvent = true }
             };
-            SetTemplateField(template, "actions", actions);
+            SetTemplateField(template, "eventChannels", eventChannels);
+            
+            // Response objects
+            var responseObjects = new List<ResponseObjectConfig>
+            {
+                new ResponseObjectConfig 
+                { 
+                    objectName = "ButtonFeedback", 
+                    description = "Provides audio/visual feedback for button press",
+                    createNewObject = true,
+                    listenToEvents = new List<string> { "ButtonPressed" },
+                    actions = new List<ActionConfig> { new ActionConfig { ActionId = "audio-action", executionDelay = 0f } }
+                },
+                new ResponseObjectConfig 
+                { 
+                    objectName = "MechanismTarget", 
+                    description = "The mechanism activated by the button (door, elevator, etc.)",
+                    createNewObject = true,
+                    listenToEvents = new List<string> { "ButtonPressed" },
+                    actions = new List<ActionConfig> { new ActionConfig { ActionId = "component-toggle", executionDelay = 0.2f } }
+                }
+            };
+            SetTemplateField(template, "responseObjects", responseObjects);
             
             // General settings
             SetTemplateField(template, "canRepeat", true);
             SetTemplateField(template, "cooldownTime", 1f);
             SetTemplateField(template, "debugMode", false);
+            
+            // Organization settings - Interactive buttons benefit from shared parent
+            SetTemplateField(template, "useSharedParent", true);
+            SetTemplateField(template, "preferCreateNew", true);
             
             SaveTemplate(template, "InteractiveButton");
         }
@@ -202,6 +278,7 @@ namespace GameFramework.Events.Templates
             SetTemplateField(template, "description", "Door that opens when player approaches and closes when they leave. Uses proximity detection with enter/exit events.");
             SetTemplateField(template, "category", "Interactive");
             SetTemplateField(template, "difficulty", 3);
+            SetTemplateField(template, "gameObjectName", "AutomaticDoor");
             
             // Trigger config
             var triggerConfig = new TriggerConfig
@@ -216,18 +293,44 @@ namespace GameFramework.Events.Templates
             };
             SetTemplateField(template, "triggerSettings", triggerConfig);
             
-            // Actions
-            var actions = new List<ActionConfig>
+            // Event channels
+            var eventChannels = new List<EventChannelConfig>
             {
-                new ActionConfig { ActionId = "audio-action", executionDelay = 0f },
-                new ActionConfig { ActionId = "component-toggle", executionDelay = 0.1f }
+                new EventChannelConfig { eventName = "DoorOpen", description = "Triggered when player approaches door", createNewEvent = true },
+                new EventChannelConfig { eventName = "DoorClose", description = "Triggered when player leaves door area", createNewEvent = true }
             };
-            SetTemplateField(template, "actions", actions);
+            SetTemplateField(template, "eventChannels", eventChannels);
+            
+            // Response objects
+            var responseObjects = new List<ResponseObjectConfig>
+            {
+                new ResponseObjectConfig 
+                { 
+                    objectName = "DoorSounds", 
+                    description = "Plays door opening/closing sounds",
+                    createNewObject = true,
+                    listenToEvents = new List<string> { "DoorOpen", "DoorClose" },
+                    actions = new List<ActionConfig> { new ActionConfig { ActionId = "audio-action", executionDelay = 0f } }
+                },
+                new ResponseObjectConfig 
+                { 
+                    objectName = "DoorMechanism", 
+                    description = "Controls door opening/closing animation or movement",
+                    createNewObject = true,
+                    listenToEvents = new List<string> { "DoorOpen", "DoorClose" },
+                    actions = new List<ActionConfig> { new ActionConfig { ActionId = "component-toggle", executionDelay = 0.1f } }
+                }
+            };
+            SetTemplateField(template, "responseObjects", responseObjects);
             
             // General settings
             SetTemplateField(template, "canRepeat", true);
             SetTemplateField(template, "cooldownTime", 0.5f);
             SetTemplateField(template, "debugMode", false);
+            
+            // Organization settings - Automatic doors benefit from shared parent
+            SetTemplateField(template, "useSharedParent", true);
+            SetTemplateField(template, "preferCreateNew", true);
             
             SaveTemplate(template, "AutomaticDoor");
         }

@@ -18,6 +18,7 @@ MonoBehaviour:
   templateIcon: {fileID: 0}
   category: Timing
   difficulty: 1
+  gameObjectName: TimedEvent
   triggerSettings:
     triggerType: 2
     collisionEvent: 0
@@ -36,10 +37,51 @@ MonoBehaviour:
     timerDuration: 3
     startOnAwake: 1
     autoReset: 0
-  eventChannels: []
+  eventChannels:
+  - eventName: TimerExpired
+    description: Triggered when timer reaches zero
+    createNewEvent: 1
+    existingEventPath: 
+    gameEventAsset: {fileID: 0}
   conditions: []
   requireAllConditions: 1
-  responseObjects: []
+  responseObjects:
+  - objectName: AudioFeedback
+    description: Plays audio when timer expires
+    createNewObject: 1
+    targetObjectId: 
+    targetGameObject: {fileID: 0}
+    listenToEvents:
+    - TimerExpired
+    gameEventAssets: []
+    actions:
+    - actionId: audio-action
+      executionDelay: 0
+      actionData: 
+    eventSubscriptionMode: 0
+    isParentObject: 0
+    isChildObject: 0
+    parentObjectName: 
+    childObjects: []
+  - objectName: TargetObject
+    description: Object to activate/deactivate after timer
+    createNewObject: 1
+    targetObjectId: 
+    targetGameObject: {fileID: 0}
+    listenToEvents:
+    - TimerExpired
+    gameEventAssets: []
+    actions:
+    - actionId: gameobject-activate
+      executionDelay: 0.5
+      actionData: 
+    eventSubscriptionMode: 0
+    isParentObject: 0
+    isChildObject: 0
+    parentObjectName: 
+    childObjects: []
   canRepeat: 0
   cooldownTime: 0
   debugMode: 0
+  useSharedParent: 0
+  preferCreateNew: 1

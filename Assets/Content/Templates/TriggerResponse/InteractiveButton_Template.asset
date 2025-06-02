@@ -18,6 +18,7 @@ MonoBehaviour:
   templateIcon: {fileID: 0}
   category: Interactive
   difficulty: 2
+  gameObjectName: InteractiveButton
   triggerSettings:
     triggerType: 0
     collisionEvent: 0
@@ -36,10 +37,51 @@ MonoBehaviour:
     timerDuration: 1
     startOnAwake: 1
     autoReset: 0
-  eventChannels: []
+  eventChannels:
+  - eventName: ButtonPressed
+    description: Triggered when button is activated by player
+    createNewEvent: 1
+    existingEventPath: 
+    gameEventAsset: {fileID: 0}
   conditions: []
   requireAllConditions: 1
-  responseObjects: []
+  responseObjects:
+  - objectName: ButtonFeedback
+    description: Provides audio/visual feedback for button press
+    createNewObject: 1
+    targetObjectId: 
+    targetGameObject: {fileID: 0}
+    listenToEvents:
+    - ButtonPressed
+    gameEventAssets: []
+    actions:
+    - actionId: audio-action
+      executionDelay: 0
+      actionData: 
+    eventSubscriptionMode: 0
+    isParentObject: 0
+    isChildObject: 0
+    parentObjectName: 
+    childObjects: []
+  - objectName: MechanismTarget
+    description: The mechanism activated by the button (door, elevator, etc.)
+    createNewObject: 1
+    targetObjectId: 
+    targetGameObject: {fileID: 0}
+    listenToEvents:
+    - ButtonPressed
+    gameEventAssets: []
+    actions:
+    - actionId: component-toggle
+      executionDelay: 0.2
+      actionData: 
+    eventSubscriptionMode: 0
+    isParentObject: 0
+    isChildObject: 0
+    parentObjectName: 
+    childObjects: []
   canRepeat: 1
   cooldownTime: 1
   debugMode: 0
+  useSharedParent: 1
+  preferCreateNew: 1

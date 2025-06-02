@@ -1,3 +1,5 @@
+using System.Collections.Generic;
+using System.Linq;
 using UnityEngine;
 using UnityEditor;
 
@@ -15,7 +17,8 @@ namespace GameFramework.Core.Editor
         public enum CLGFTheme
         {
             Event,          // Blue theme for listeners, channels, event components
-            Action,         // Orange theme for event-raising actions and triggers  
+            Action,         // Green theme for general actions and responses  
+            Collision,      // Orange theme for trigger/collision actions specifically
             ObjectControl,  // Green theme for actions that control other GameObjects
             Character,      // Purple theme for character and player components
             Camera,         // Teal theme for camera and view components
@@ -29,6 +32,9 @@ namespace GameFramework.Core.Editor
             (new Color(0.3f, 0.7f, 0.9f, 0.05f), new Color(0.3f, 0.7f, 0.9f, 0.8f), new Color(0.2f, 0.6f, 0.8f, 0.8f));
             
         private static readonly (Color background, Color border, Color label) ActionColors = 
+            (new Color(0.3f, 0.9f, 0.4f, 0.05f), new Color(0.3f, 0.9f, 0.4f, 0.8f), new Color(0.2f, 0.7f, 0.3f, 0.8f));
+            
+        private static readonly (Color background, Color border, Color label) CollisionColors = 
             (new Color(0.9f, 0.7f, 0.3f, 0.05f), new Color(0.9f, 0.7f, 0.3f, 0.8f), new Color(0.8f, 0.6f, 0.2f, 0.8f));
             
         private static readonly (Color background, Color border, Color label) ObjectControlColors = 
@@ -66,6 +72,7 @@ namespace GameFramework.Core.Editor
                 {
                     CLGFTheme.Event => EventColors.background,
                     CLGFTheme.Action => ActionColors.background,
+                    CLGFTheme.Collision => CollisionColors.background,
                     CLGFTheme.ObjectControl => ObjectControlColors.background,
                     CLGFTheme.Character => CharacterColors.background,
                     CLGFTheme.Camera => CameraColors.background,
@@ -85,6 +92,7 @@ namespace GameFramework.Core.Editor
                 {
                     CLGFTheme.Event => EventColors.border,
                     CLGFTheme.Action => ActionColors.border,
+                    CLGFTheme.Collision => CollisionColors.border,
                     CLGFTheme.ObjectControl => ObjectControlColors.border,
                     CLGFTheme.Character => CharacterColors.border,
                     CLGFTheme.Camera => CameraColors.border,
@@ -104,6 +112,7 @@ namespace GameFramework.Core.Editor
                 {
                     CLGFTheme.Event => EventColors.label,
                     CLGFTheme.Action => ActionColors.label,
+                    CLGFTheme.Collision => CollisionColors.label,
                     CLGFTheme.ObjectControl => ObjectControlColors.label,
                     CLGFTheme.Character => CharacterColors.label,
                     CLGFTheme.Camera => CameraColors.label,
@@ -224,5 +233,75 @@ namespace GameFramework.Core.Editor
             
             return height + 10f; // Extra padding
         }
+        
+        #region Foldout System
+        
+        /// <summary>
+        /// Draws a collapsible foldout section with themed styling.
+        /// Returns true if the section is expanded and content should be drawn.
+        /// </summary>
+        protected bool DrawFoldoutSection(FoldoutUtility.FoldoutConfig config, System.Action drawContent)
+        {
+            return FoldoutUtility.DrawFoldoutSection(GetType(), config, drawContent);
+        }
+        
+        /// <summary>
+        /// Draws a collapsible foldout section with themed styling.
+        /// Returns true if the section is expanded and content should be drawn.
+        /// </summary>
+        protected bool DrawFoldoutSection(string id, string title, string icon = "📁", CLGFTheme theme = CLGFTheme.System, System.Action drawContent = null, bool defaultExpanded = true, bool showItemCount = false, int itemCount = 0, string tooltip = "")
+        {
+            return FoldoutUtility.DrawFoldoutSection(GetType(), id, title, icon, theme, drawContent, defaultExpanded, showItemCount, itemCount, tooltip);
+        }
+        
+        /// <summary>
+        /// Draws a simple foldout without themed styling for basic use cases.
+        /// </summary>
+        protected bool DrawSimpleFoldout(string id, string title, System.Action drawContent, bool defaultExpanded = true)
+        {
+            return FoldoutUtility.DrawSimpleFoldout(GetType(), id, title, drawContent, defaultExpanded);
+        }
+        
+        /// <summary>
+        /// Gets the current expansion state of a foldout.
+        /// </summary>
+        protected bool GetFoldoutState(string id)
+        {
+            return FoldoutUtility.GetFoldoutState(GetType(), id);
+        }
+        
+        /// <summary>
+        /// Sets the expansion state of a foldout.
+        /// </summary>
+        protected void SetFoldoutState(string id, bool expanded)
+        {
+            FoldoutUtility.SetFoldoutState(GetType(), id, expanded);
+        }
+        
+        /// <summary>
+        /// Collapses all foldouts for this editor type.
+        /// </summary>
+        protected void CollapseAllFoldouts()
+        {
+            FoldoutUtility.CollapseAllFoldouts(GetType());
+        }
+        
+        /// <summary>
+        /// Expands all foldouts for this editor type.
+        /// </summary>
+        protected void ExpandAllFoldouts()
+        {
+            FoldoutUtility.ExpandAllFoldouts(GetType());
+        }
+        
+        /// <summary>
+        /// Draws expand/collapse all buttons for this editor.
+        /// </summary>
+        protected void DrawFoldoutControls()
+        {
+            FoldoutUtility.DrawFoldoutControls(GetType());
+        }
+        
+        #endregion
     }
 }

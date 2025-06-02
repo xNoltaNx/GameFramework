@@ -18,6 +18,7 @@ MonoBehaviour:
   templateIcon: {fileID: 0}
   category: Items
   difficulty: 1
+  gameObjectName: PickupItem
   triggerSettings:
     triggerType: 0
     collisionEvent: 0
@@ -52,21 +53,35 @@ MonoBehaviour:
     targetGameObject: {fileID: 0}
     listenToEvents:
     - ItemCollected
+    gameEventAssets: []
     actions:
-    - actionType: 0
+    - actionId: audio-action
       executionDelay: 0
       actionData: 
+    eventSubscriptionMode: 0
+    isParentObject: 0
+    isChildObject: 0
+    parentObjectName: 
+    childObjects: []
   - objectName: ItemVisual
     description: Deactivates the item visual
-    createNewObject: 0
+    createNewObject: 1
     targetObjectId: 
     targetGameObject: {fileID: 0}
     listenToEvents:
     - ItemCollected
+    gameEventAssets: []
     actions:
-    - actionType: 1
+    - actionId: gameobject-activate
       executionDelay: 0.1
       actionData: 
+    eventSubscriptionMode: 0
+    isParentObject: 0
+    isChildObject: 0
+    parentObjectName: 
+    childObjects: []
   canRepeat: 0
   cooldownTime: 0
   debugMode: 0
+  useSharedParent: 1
+  preferCreateNew: 1

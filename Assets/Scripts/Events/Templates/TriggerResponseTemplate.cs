@@ -20,6 +20,7 @@ namespace GameFramework.Events.Templates
         [SerializeField] private Texture2D templateIcon;
         [SerializeField] private string category = "General";
         [SerializeField] private int difficulty = 1; // 1 = Beginner, 2 = Intermediate, 3 = Advanced
+        [SerializeField] private string gameObjectName = "NewInteraction"; // Logical name for the main GameObject
         
         [Header("Trigger Configuration")]
         [SerializeField] private TriggerConfig triggerSettings;
@@ -39,12 +40,17 @@ namespace GameFramework.Events.Templates
         [SerializeField] private float cooldownTime = 0f;
         [SerializeField] private bool debugMode = false;
         
+        [Header("Organization")]
+        [SerializeField] private bool useSharedParent = false;
+        [SerializeField] private bool preferCreateNew = true;
+        
         // Properties
         public string TemplateName => templateName;
         public string Description => description;
         public Texture2D TemplateIcon => templateIcon;
         public string Category => category;
         public int Difficulty => difficulty;
+        public string GameObjectName => gameObjectName;
         public TriggerConfig TriggerSettings => triggerSettings;
         public List<EventChannelConfig> EventChannels => eventChannels;
         public List<ConditionConfig> Conditions => conditions;
@@ -53,6 +59,36 @@ namespace GameFramework.Events.Templates
         public bool CanRepeat => canRepeat;
         public float CooldownTime => cooldownTime;
         public bool DebugMode => debugMode;
+        public bool UseSharedParent => useSharedParent;
+        public bool PreferCreateNew => preferCreateNew;
+        
+#if UNITY_EDITOR
+        /// <summary>
+        /// Updates template to use new organization features.
+        /// Call this from editor scripts to migrate old templates.
+        /// </summary>
+        public void UpdateToNewFeatures(bool setUseSharedParent = false, bool setPreferCreateNew = true)
+        {
+            useSharedParent = setUseSharedParent;
+            preferCreateNew = setPreferCreateNew;
+            
+            // Update all response objects to create new
+            if (preferCreateNew)
+            {
+                foreach (var responseConfig in responseObjects)
+                {
+                    responseConfig.createNewObject = true;
+                }
+                
+                foreach (var eventConfig in eventChannels)
+                {
+                    eventConfig.createNewEvent = true;
+                }
+            }
+            
+            UnityEditor.EditorUtility.SetDirty(this);
+        }
+#endif
     }
     
     /// <summary>
@@ -165,6 +201,15 @@ namespace GameFramework.Events.Templates
     }
     
     /// <summary>
+    /// Event subscription modes for response objects
+    /// </summary>
+    public enum EventSubscriptionMode
+    {
+        WizardEvents,  // Use events configured in the current wizard
+        Manual         // Manual entry via GameEvent assets or text input
+    }
+    
+    /// <summary>
     /// Configuration for response objects
     /// </summary>
     [Serializable]
@@ -179,6 +224,16 @@ namespace GameFramework.Events.Templates
         public GameObject targetGameObject;
         
         public List<string> listenToEvents = new List<string>(); // Event names this object responds to
+        public List<GameFramework.Events.Channels.GameEvent> gameEventAssets = new List<GameFramework.Events.Channels.GameEvent>(); // Direct GameEvent ScriptableObject references
         public List<ActionConfig> actions = new List<ActionConfig>();
+        
+        [Header("Event Subscription Settings")]
+        public EventSubscriptionMode eventSubscriptionMode = EventSubscriptionMode.WizardEvents; // Mode for event subscription
+        
+        [Header("Hierarchy Settings")]
+        public bool isParentObject = false; // Whether this is a parent container
+        public bool isChildObject = false; // Whether this is a child of another response object
+        public string parentObjectName = ""; // Name of the parent object (for child objects)
+        public List<ResponseObjectConfig> childObjects = new List<ResponseObjectConfig>(); // Child response objects
     }
 }
