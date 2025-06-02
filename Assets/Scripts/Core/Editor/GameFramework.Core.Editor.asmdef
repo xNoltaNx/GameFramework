@@ -2,7 +2,8 @@
     "name": "GameFramework.Core.Editor",
     "rootNamespace": "GameFramework.Core.Editor",
     "references": [
-        "GameFramework.Core"
+        "GameFramework.Core",
+        "GameFramework.Events"
     ],
     "includePlatforms": [
         "Editor"

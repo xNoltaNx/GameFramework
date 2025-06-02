@@ -129,6 +129,9 @@ namespace GameFramework.Core.Editor
             // Draw CLGF label at the top
             DrawCLGFLabel();
             
+            // Draw visualization controls for CLGF components
+            DrawVisualizationControls();
+            
             // Begin background area - we'll draw the background after the content to get accurate height
             Rect backgroundStartRect = GUILayoutUtility.GetRect(0, 0);
             float backgroundStartY = backgroundStartRect.y;
@@ -300,6 +303,95 @@ namespace GameFramework.Core.Editor
         protected void DrawFoldoutControls()
         {
             FoldoutUtility.DrawFoldoutControls(GetType());
+        }
+        
+        #endregion
+        
+        #region Visualization Integration
+        
+        /// <summary>
+        /// Draws visualization controls and information for CLGF components.
+        /// </summary>
+        protected virtual void DrawVisualizationControls()
+        {
+            if (!ShouldShowVisualizationControls())
+                return;
+                
+            GUILayout.Space(2f);
+            
+            // Create a compact visualization controls section
+            EditorGUILayout.BeginHorizontal();
+            
+            // Quick toggle for scene gizmos
+            if (GUILayout.Button(new GUIContent("👁️", "Toggle scene view gizmos"), GUILayout.Width(25), GUILayout.Height(20)))
+            {
+                CLGFVisualizationSettings.ShowSceneGizmos = !CLGFVisualizationSettings.ShowSceneGizmos;
+            }
+            
+            // Quick toggle for connection lines
+            if (IsConnectionCapable() && GUILayout.Button(new GUIContent("🔗", "Toggle connection lines"), GUILayout.Width(25), GUILayout.Height(20)))
+            {
+                CLGFVisualizationSettings.ShowConnectionLines = !CLGFVisualizationSettings.ShowConnectionLines;
+            }
+            
+            // Quick toggle for action previews
+            if (IsActionComponent() && GUILayout.Button(new GUIContent("🎯", "Toggle action previews"), GUILayout.Width(25), GUILayout.Height(20)))
+            {
+                CLGFVisualizationSettings.ShowActionPreviews = !CLGFVisualizationSettings.ShowActionPreviews;
+            }
+            
+            // Always show toggle
+            Color originalBgColor = GUI.backgroundColor;
+            if (CLGFVisualizationSettings.AlwaysShow)
+            {
+                GUI.backgroundColor = Color.green;
+            }
+            
+            if (GUILayout.Button(new GUIContent("🌐", "Toggle always show all mode"), GUILayout.Width(25), GUILayout.Height(20)))
+            {
+                CLGFVisualizationSettings.AlwaysShow = !CLGFVisualizationSettings.AlwaysShow;
+            }
+            
+            GUI.backgroundColor = originalBgColor;
+            
+            GUILayout.FlexibleSpace();
+            
+            // Link to full settings
+            if (GUILayout.Button(new GUIContent("⚙️", "Open CLGF Visualization Settings"), GUILayout.Width(25), GUILayout.Height(20)))
+            {
+                SettingsService.OpenUserPreferences("Preferences/CLGF Visualization");
+            }
+            
+            EditorGUILayout.EndHorizontal();
+            
+            GUILayout.Space(2f);
+        }
+        
+        /// <summary>
+        /// Determines if this component should show visualization controls.
+        /// </summary>
+        protected virtual bool ShouldShowVisualizationControls()
+        {
+            return target is MonoBehaviour mb && 
+                   (mb is GameFramework.Events.Triggers.BaseTrigger || 
+                    mb is GameFramework.Events.Actions.BaseTriggerAction ||
+                    mb is GameFramework.Events.Channels.BaseEventChannel);
+        }
+        
+        /// <summary>
+        /// Determines if this component can show connection lines.
+        /// </summary>
+        protected virtual bool IsConnectionCapable()
+        {
+            return target is GameFramework.Events.Triggers.BaseTrigger;
+        }
+        
+        /// <summary>
+        /// Determines if this component is an action that can show previews.
+        /// </summary>
+        protected virtual bool IsActionComponent()
+        {
+            return target is GameFramework.Events.Actions.BaseTriggerAction;
         }
         
         #endregion
